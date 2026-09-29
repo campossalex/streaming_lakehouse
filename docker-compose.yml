@@ -1,0 +1,795 @@
+name: streaming-lakehouse-oss
+
+# Streaming lakehouse on open source: Apache Flink + Apache Fluss + Apache Iceberg, all in
+# Docker Compose. The open-source edition of ../streaming_lakehouse, which runs the same
+# labs on Ververica Platform.
+#
+#   orders_log (Kafka) ─► Fluss log table ─► lookup join ◄─ Fluss PK table ◄─ Postgres CDC
+#                                                │
+#                                   fluss.orders.orders_enriched
+#                                                │  tiering service (a Flink job)
+#                                                ▼
+#                       Iceberg on MinIO, catalogued by Lakekeeper ─► Trino / CloudBeaver
+#
+# Prerequisites:
+#   ./download-jars.sh once, to populate ./lib/
+#   ./start.sh         (docker compose up -d, then submits the pipeline; see --services-only)
+#
+# Ports exposed to the host:
+#   80    — Environment homepage (links to everything below)
+#   8081  — Flink Web UI
+#   8083  — Flink SQL Gateway (REST)
+#   8084  — Web SQL editor (Flink SQL in the browser, in front of the SQL Gateway)
+#   9123  — Fluss coordinator
+#   8082  — Redpanda Console
+#   19092 — Redpanda Kafka (external listener; redpanda:9092 inside the network)
+#   5432  — PostgreSQL `orders` (product_catalog CDC source, revenue_5m sink)
+#   9000  — MinIO S3 API
+#   9001  — MinIO Console (see the Parquet and metadata files Fluss tiers)
+#   8181  — Lakekeeper (Iceberg REST catalog + its web UI at /ui)
+#   8080  — Trino
+#   8978  — CloudBeaver (SQL workbench, pre-wired to Trino)
+#   3000  — Grafana
+
+x-flink-image: &flink-image apache/flink:1.20-java17
+x-fluss-image: &fluss-image apache/fluss:0.9.1-incubating
+
+# Mounted at the same path everywhere Fluss data is read or written — see remote.data.dir
+# in the Fluss server properties below for why this is a shared volume and not s3://.
+#
+# Deliberately NOT under /tmp/fluss. Docker creates a mount point's missing parents as
+# root:root 0755, and /tmp/fluss is the Fluss client's default scratch directory: a
+# streaming read of a PK table downloads its KV snapshot there, so in the uid-9999 Flink
+# containers every such read would fail with
+#   IOException: Failed to create directory /tmp/fluss/kv-snapshots-... for storing kv snapshot files
+x-fluss-remote: &fluss-remote fluss-remote-data:/fluss/remote-data
+
+# S3 keys for MinIO, for the Iceberg reader inside Flink (the union read, the $lake
+# tables, the `iceberg` catalog). Fluss hands clients the table's datalake options but
+# drops the credential ones, so without these the AWS SDK's default provider chain comes
+# up empty and every lake read fails with
+#   SdkClientException: Unable to load credentials from any of the providers in the chain
+x-aws-env: &aws-env
+  AWS_ACCESS_KEY_ID: admin
+  AWS_SECRET_ACCESS_KEY: password
+  AWS_REGION: us-east-1
+
+# The Fluss server configuration, shared by the coordinator and the tablet server.
+# Passed as FLUSS_PROPERTIES, which the image's entrypoint appends to conf/server.yaml —
+# rather than bind-mounting server.yaml, which the entrypoint edits in place with sed -i.
+x-fluss-properties: &fluss-properties |
+  zookeeper.address: zookeeper:2181
+  default.replication.factor: 1
+  default.bucket.number: 3
+
+  # Remote data directory — Fluss offloads cold log segments and KV snapshots here.
+  #
+  # Deliberately a shared local volume, NOT s3://. When remote.data.dir is on S3, Fluss
+  # hands clients short-lived STS credentials (S3DelegationTokenProvider -> GetSessionToken),
+  # and MinIO does not implement GetSessionToken. The token is never issued, and every
+  # Flink read that touches remote data dies with
+  #   NoAwsCredentialsException: Dynamic session credentials for Fluss: No AWS Credentials
+  # The Iceberg lake below still lives on MinIO — Iceberg's S3FileIO takes static keys.
+  remote.data.dir: /fluss/remote-data
+
+  # Datalake tiering to Iceberg, through the Lakekeeper REST catalog.
+  #
+  # datalake.format is copied into each table's properties at CREATE TABLE time, and
+  # fixes the table's bucketing to match Iceberg's. A table created before this was set
+  # cannot be tiered: DROP and re-create it.
+  #
+  # The same datalake.iceberg.* values are passed to the tiering job from tiering.args, and
+  # reach the Flink union read through the table properties. Keep all three in sync.
+  datalake.format: iceberg
+  datalake.iceberg.type: rest
+  datalake.iceberg.uri: http://lakekeeper:8181/catalog
+  datalake.iceberg.warehouse: warehouse
+  datalake.iceberg.io-impl: org.apache.iceberg.aws.s3.S3FileIO
+  datalake.iceberg.s3.endpoint: http://minio:9000
+  datalake.iceberg.s3.access-key-id: admin
+  datalake.iceberg.s3.secret-access-key: password
+  datalake.iceberg.s3.path-style-access: true
+  datalake.iceberg.client.region: us-east-1
+
+# Appended to config.yaml by the two containers that never run /docker-entrypoint.sh
+# (sql-client, sql-gateway), so FLINK_PROPERTIES would be ignored there. Without the
+# cluster address they fall back to rest.address 0.0.0.0 and submission fails with
+# "Connection refused: /0.0.0.0:8081".
+x-flink-client-conf: &flink-client-conf |
+  jobmanager.rpc.address: jobmanager
+  rest.address: jobmanager
+  rest.port: 8081
+  table.local-time-zone: UTC
+  table.catalog-store.kind: file
+  table.catalog-store.file.path: /opt/flink/catalog-store
+  execution.checkpointing.interval: 30s
+  state.backend.type: hashmap
+  state.checkpoints.dir: file:///tmp/flink-checkpoints
+  restart-strategy.type: exponential-delay
+  restart-strategy.exponential-delay.initial-backoff: 10s
+  restart-strategy.exponential-delay.max-backoff: 2min
+
+services:
+
+  # ── Fluss: ZooKeeper, coordinator, tablet server ─────────────────────────────
+
+  zookeeper:
+    image: zookeeper:3.9.1
+    hostname: zookeeper
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: "server.1=zookeeper:2888:3888;2181"
+    networks:
+      - lakehouse-net
+    healthcheck:
+      test: ["CMD", "zkServer.sh", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # The image ships fluss-lake-iceberg in plugins/iceberg/, but that JAR bundles Iceberg
+  # core without S3FileIO. The entrypoint drops iceberg-aws, its AWS SDK bundle and
+  # failsafe alongside it, so the coordinator can create the Iceberg table on MinIO when
+  # a table is ALTERed to 'table.datalake.enabled' = 'true'.
+  coordinator-server:
+    image: *fluss-image
+    hostname: coordinator-server
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        cp /opt/lib/iceberg-aws-*.jar /opt/lib/failsafe-*.jar /opt/fluss/plugins/iceberg/
+        export FLUSS_PROPERTIES="$$FLUSS_ROLE_PROPERTIES
+        $$FLUSS_COMMON_PROPERTIES"
+        exec /docker-entrypoint.sh coordinatorServer
+    environment:
+      TZ: UTC
+      FLUSS_COMMON_PROPERTIES: *fluss-properties
+      FLUSS_ROLE_PROPERTIES: |
+        bind.listeners: FLUSS://coordinator-server:9123
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+      lakekeeper-warehouse:
+        condition: service_completed_successfully
+      fluss-remote-init:
+        condition: service_completed_successfully
+    ports:
+      - "9123:9123"
+    volumes:
+      - ./lib:/opt/lib:ro
+      - *fluss-remote
+    networks:
+      - lakehouse-net
+    healthcheck:
+      # The server binds its advertised hostname, not localhost.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/coordinator-server/9123"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+
+  tablet-server:
+    image: *fluss-image
+    hostname: tablet-server
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        cp /opt/lib/iceberg-aws-*.jar /opt/lib/failsafe-*.jar /opt/fluss/plugins/iceberg/
+        export FLUSS_PROPERTIES="$$FLUSS_ROLE_PROPERTIES
+        $$FLUSS_COMMON_PROPERTIES"
+        exec /docker-entrypoint.sh tabletServer
+    environment:
+      TZ: UTC
+      FLUSS_COMMON_PROPERTIES: *fluss-properties
+      FLUSS_ROLE_PROPERTIES: |
+        bind.listeners: FLUSS://tablet-server:9123
+        tablet-server.id: 0
+        data.dir: /tmp/fluss/data
+    depends_on:
+      coordinator-server:
+        condition: service_healthy
+    volumes:
+      - ./lib:/opt/lib:ro
+      - *fluss-remote
+    networks:
+      - lakehouse-net
+
+  # The volume is shared by the root-run Fluss servers and the uid-9999 Flink containers,
+  # and both sides write to it: the servers their log segments and KV snapshots, the
+  # tiering job its per-commit offsets files (lake/<db>/<table>/metadata/*.offsets). A
+  # fresh named volume is root:root 0755, so without this the tiering job's first commit
+  # would fail on a permission error.
+  fluss-remote-init:
+    image: *fluss-image
+    user: root
+    entrypoint: ["/bin/sh", "-c", "chmod 1777 /fluss/remote-data && echo 'fluss remote dir ready.'"]
+    volumes:
+      - *fluss-remote
+    networks:
+      - lakehouse-net
+
+  # ── Object storage + the Iceberg REST catalog ────────────────────────────────
+  #
+  # Same stack as ../lakehouse_oss: the `pgsty/minio` community fork (upstream MinIO no
+  # longer publishes pullable images, and its later consoles dropped the object browser),
+  # and Lakekeeper with its metadata in its own PostgreSQL.
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    hostname: minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+      TZ: UTC
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - lakehouse-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  minio-init:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >
+        mc alias set local http://minio:9000 admin password &&
+        mc mb --ignore-existing local/warehouse &&
+        echo 'Bucket s3://warehouse ready.'
+    networks:
+      - lakehouse-net
+
+  catalog-db:
+    image: postgres:17
+    hostname: catalog-db
+    environment:
+      POSTGRES_USER: lakekeeper
+      POSTGRES_PASSWORD: lakekeeper
+      POSTGRES_DB: lakekeeper
+      TZ: UTC
+    volumes:
+      - catalog-db-data:/var/lib/postgresql/data
+    networks:
+      - lakehouse-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lakekeeper -d lakekeeper"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Schema migrations run as their own one-shot container: `serve` does not migrate.
+  lakekeeper-migrate:
+    image: quay.io/lakekeeper/catalog:v0.13.5
+    restart: "no"
+    command: ["migrate"]
+    environment: &lakekeeper-env
+      LAKEKEEPER__PG_ENCRYPTION_KEY: workshop-key-not-secure
+      LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://lakekeeper:lakekeeper@catalog-db:5432/lakekeeper
+      LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://lakekeeper:lakekeeper@catalog-db:5432/lakekeeper
+      RUST_LOG: info
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+    networks:
+      - lakehouse-net
+
+  lakekeeper:
+    image: quay.io/lakekeeper/catalog:v0.13.5
+    hostname: lakekeeper
+    command: ["serve"]
+    environment: *lakekeeper-env
+    ports:
+      - "8181:8181"
+    depends_on:
+      lakekeeper-migrate:
+        condition: service_completed_successfully
+    networks:
+      - lakehouse-net
+    healthcheck:
+      test: ["CMD", "/home/nonroot/lakekeeper", "healthcheck"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+  # A fresh Lakekeeper refuses every API call until someone accepts the terms of use,
+  # and has no warehouse until one is created. A second run gets a 4xx for each, which
+  # is harmless: curl exits 0 without -f, so the dependency chain still completes.
+  lakekeeper-bootstrap:
+    image: curlimages/curl:8.11.1
+    restart: "no"
+    depends_on:
+      lakekeeper:
+        condition: service_healthy
+    command:
+      - -sS
+      - -X
+      - POST
+      - http://lakekeeper:8181/management/v1/bootstrap
+      - -H
+      - "Content-Type: application/json"
+      - --data
+      - '{"accept-terms-of-use": true}'
+    networks:
+      - lakehouse-net
+
+  # The `warehouse` warehouse: the mapping from catalog to s3://warehouse on MinIO.
+  # sts-enabled and remote-signing-enabled are both false on purpose. Remote signing
+  # makes Iceberg's S3FileIO instantiate S3V4RestSignerClient, which fails inside
+  # fluss-lake-iceberg (its shaded Jackson does not match iceberg-aws's) with a
+  # VerifyError at the first tiering commit.
+  lakekeeper-warehouse:
+    image: curlimages/curl:8.11.1
+    restart: "no"
+    depends_on:
+      lakekeeper-bootstrap:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./lakekeeper/create-warehouse.json:/tmp/create-warehouse.json:ro
+    command:
+      - -sS
+      - -X
+      - POST
+      - http://lakekeeper:8181/management/v1/warehouse
+      - -H
+      - "Content-Type: application/json"
+      - --data
+      - "@/tmp/create-warehouse.json"
+    networks:
+      - lakehouse-net
+
+  # ── Trino + CloudBeaver — reading the lake with no Flink or Fluss involved ────
+
+  trino:
+    image: trinodb/trino:483
+    hostname: trino
+    environment:
+      TZ: UTC
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./trino/catalog/warehouse.properties:/etc/trino/catalog/warehouse.properties:ro
+    depends_on:
+      lakekeeper-warehouse:
+        condition: service_completed_successfully
+    networks:
+      - lakehouse-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # The Trino connection is pre-created through conf/initial-data-sources.conf, which the
+  # image reads when it initialises a fresh workspace — see ../lakehouse_oss for why that
+  # path and not workspace/GlobalConfiguration/.dbeaver/data-sources.json.
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:26.2.1
+    hostname: cloudbeaver
+    environment:
+      TZ: UTC
+      CB_SERVER_NAME: "Streaming Lakehouse Workshop"
+      CB_SERVER_URL: "http://localhost:8978"
+      # Skips the first-run setup wizard.
+      CB_ADMIN_NAME: cbadmin
+      CB_ADMIN_PASSWORD: Admin123
+      # Without this the pre-created connection exists but is invisible to the anonymous
+      # user everyone arrives as.
+      CLOUDBEAVER_APP_GRANT_CONNECTIONS_ACCESS_TO_ANONYMOUS_TEAM: "true"
+      CLOUDBEAVER_APP_SUPPORTS_CUSTOM_CONNECTIONS: "true"
+    ports:
+      - "8978:8978"
+    volumes:
+      - ./cloudbeaver/data-sources.json:/opt/cloudbeaver/conf/initial-data-sources.conf:ro
+      - cloudbeaver-workspace:/opt/cloudbeaver/workspace
+    depends_on:
+      trino:
+        condition: service_healthy
+    networks:
+      - lakehouse-net
+
+  # ── Redpanda (Kafka-compatible broker) ───────────────────────────────────────
+
+  redpanda:
+    image: redpandadata/redpanda:v24.3.7
+    hostname: redpanda
+    command:
+      - redpanda
+      - start
+      - --node-id=0
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --rpc-addr=redpanda:33145
+      - --advertise-rpc-addr=redpanda:33145
+      - --smp=1
+      - --memory=1G
+      - --mode=dev-container
+      - --default-log-level=warn
+    ports:
+      - "19092:19092"
+    networks:
+      - lakehouse-net
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "info"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redpanda-init:
+    image: redpandadata/redpanda:v24.3.7
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        (rpk topic create orders_log --brokers redpanda:9092 --partitions 3 || true)
+        && echo 'Kafka topic orders_log ready.'
+    networks:
+      - lakehouse-net
+
+  redpanda-console:
+    image: redpandadata/console:v2.7.2
+    hostname: redpanda-console
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    ports:
+      - "8082:8080"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - lakehouse-net
+
+  # ── PostgreSQL `orders`: the product_catalog CDC source and the revenue_5m sink ──
+
+  postgres:
+    image: postgres:15
+    hostname: postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: admin1
+      POSTGRES_DB: orders
+      TZ: UTC
+    # wal_level=logical is what the postgres-cdc connector needs. It is a postmaster
+    # setting, so it goes on the command line; the init scripts run under a temporary
+    # server started with these same arguments, which is why they can create the
+    # logical replication slot.
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=5
+      - -c
+      - max_wal_senders=5
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./datagen/data/products.csv:/products.csv:ro
+      - ./pg_streaming_lakehouse_ddl.sql:/docker-entrypoint-initdb.d/01_streaming_lakehouse.sql:ro
+    networks:
+      - lakehouse-net
+    healthcheck:
+      # -h forces TCP. Over the default unix socket this reports ready during initdb,
+      # while the temporary init server is still loading products.csv.
+      test: ["CMD-SHELL", "pg_isready -h postgres -U root -d orders"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ── Flink session cluster ────────────────────────────────────────────────────
+  # lib/ is mounted from the host — run ./download-jars.sh first. The entrypoints copy
+  # the JARs into /opt/flink/lib/ because the mount is read-only.
+  #
+  # The shell runs as root; docker-entrypoint.sh then drops the JVM to the `flink` user.
+  # A named volume's mountpoint is created root:root 0755, so without the chown the
+  # JobManager cannot create per-job checkpoint directories.
+
+  jobmanager:
+    image: *flink-image
+    hostname: jobmanager
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - "chown flink:flink /tmp/flink-checkpoints; cp /opt/flink/lib/extra/*.jar /opt/flink/lib/ 2>/dev/null || true; /docker-entrypoint.sh jobmanager"
+    environment:
+      TZ: UTC
+      <<: *aws-env
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        jobmanager.memory.process.size: 1600m
+        taskmanager.numberOfTaskSlots: 12
+        parallelism.default: 1
+        # event_time is a naive "yyyy-MM-dd HH:mm:ss.SSS" string from a TZ=UTC generator.
+        # Pinning the planner to UTC keeps it aligned with PROCTIME() and with Grafana.
+        table.local-time-zone: UTC
+        rest.port: 8081
+        rest.address: 0.0.0.0
+        state.backend.type: hashmap
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        # The tiering service commits to Iceberg on checkpoints, so this bounds how fresh
+        # the lake can ever be — whatever a table's table.datalake.freshness says.
+        execution.checkpointing.interval: 30s
+        restart-strategy.type: exponential-delay
+        restart-strategy.exponential-delay.initial-backoff: 10s
+        restart-strategy.exponential-delay.max-backoff: 2min
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./lib:/opt/flink/lib/extra:ro
+      - ./tiering.sh:/opt/tiering.sh:ro
+      - ./tiering.args:/opt/tiering.args:ro
+      # Checkpoint state is written by the TaskManager and its metadata by the JobManager,
+      # so file:// checkpointing only works if both see one filesystem.
+      - flink-checkpoints:/tmp/flink-checkpoints
+      - *fluss-remote
+    networks:
+      - lakehouse-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://jobmanager:8081/overview"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  taskmanager:
+    image: *flink-image
+    hostname: taskmanager
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - "chown flink:flink /tmp/flink-checkpoints; cp /opt/flink/lib/extra/*.jar /opt/flink/lib/ 2>/dev/null || true; /docker-entrypoint.sh taskmanager"
+    environment:
+      TZ: UTC
+      <<: *aws-env
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 12
+        parallelism.default: 1
+        table.local-time-zone: UTC
+        taskmanager.memory.process.size: ${TM_PROCESS_SIZE:-3g}
+        # HashMapStateBackend keeps all state on the task heap and never touches managed
+        # memory; the 0.4 default would park a third of the process there, unused.
+        taskmanager.memory.managed.fraction: 0.1
+        # Batch reads (COUNT(*) against Fluss, the lake snapshots query) use the batch
+        # shuffle read buffer pool, which the 128m default leaves too small once the
+        # streaming jobs are running.
+        taskmanager.memory.framework.off-heap.size: 512m
+        state.backend.type: hashmap
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+    depends_on:
+      jobmanager:
+        condition: service_healthy
+    volumes:
+      - ./lib:/opt/flink/lib/extra:ro
+      - flink-checkpoints:/tmp/flink-checkpoints
+      - *fluss-remote
+    networks:
+      - lakehouse-net
+    restart: unless-stopped
+
+  # A fresh named volume is root-owned, and the Flink image runs as uid 9999 (flink).
+  # Without this one-shot chown, the first CREATE CATALOG dies with
+  #   java.io.FileNotFoundException: /opt/flink/catalog-store/fluss.yaml (Permission denied)
+  catalog-store-init:
+    image: *flink-image
+    user: root
+    entrypoint: ["/bin/sh", "-c", "chown 9999:9999 /opt/flink/catalog-store && echo 'catalog store ready.'"]
+    volumes:
+      - catalog-store:/opt/flink/catalog-store
+    networks:
+      - lakehouse-net
+
+  # The SQL client container. It idles so we can `docker compose exec` into it, and
+  # appends FLINK_CLIENT_CONF to its config.yaml (see x-flink-client-conf above).
+  #
+  # Checkpointing is repeated here on purpose: it is baked into the JobGraph by whoever
+  # submits the job, so setting it only on the JobManager would leave every SQL-submitted
+  # job with checkpointing off — and with it, no restart after a TaskManager loss.
+  sql-client:
+    image: *flink-image
+    hostname: sql-client
+    environment:
+      TZ: UTC
+      <<: *aws-env
+      FLINK_CLIENT_CONF: *flink-client-conf
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        cp /opt/flink/lib/extra/*.jar /opt/flink/lib/ 2>/dev/null || true
+        grep -q '^rest.address: jobmanager' /opt/flink/conf/config.yaml || \
+          printf '\n%s\n' "$$FLINK_CLIENT_CONF" >> /opt/flink/conf/config.yaml
+        sleep infinity
+    depends_on:
+      jobmanager:
+        condition: service_healthy
+      catalog-store-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./lib:/opt/flink/lib/extra:ro
+      - ./flink_sql:/opt/sql:ro
+      - ./submit.sh:/opt/submit.sh:ro
+      # CatalogStore. It persists CATALOG REGISTRATIONS — the `CREATE CATALOG fluss`
+      # configuration — not tables. That is enough here: every Fluss table lives in Fluss
+      # itself, so once `fluss` is registered, fluss.orders.* is visible from any session.
+      # Only the Kafka and CDC source tables in the in-memory default catalog are lost
+      # when a session ends. Shared with sql-gateway, so both see the same catalogs.
+      - catalog-store:/opt/flink/catalog-store
+      - *fluss-remote
+    networks:
+      - lakehouse-net
+
+  # ── Web SQL editor ───────────────────────────────────────────────────────────
+  # The SQL Gateway is the same SQL engine the SQL client embeds, exposed as a REST
+  # API: sessions, statements, paged results. It has no UI and sends no CORS headers,
+  # so the browser talks to sql-editor, which proxies to it.
+  #
+  # idle-timeout=0 means sessions never expire: the Kafka and CDC source tables an
+  # attendee creates live in the session's in-memory catalog, and the 10-minute default
+  # would silently drop them over a coffee break.
+  sql-gateway:
+    image: *flink-image
+    hostname: sql-gateway
+    environment:
+      TZ: UTC
+      <<: *aws-env
+      FLINK_CLIENT_CONF: *flink-client-conf
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        cp /opt/flink/lib/extra/*.jar /opt/flink/lib/ 2>/dev/null || true
+        grep -q '^rest.address: jobmanager' /opt/flink/conf/config.yaml || \
+          printf '\n%s\n' "$$FLINK_CLIENT_CONF" >> /opt/flink/conf/config.yaml
+        exec /opt/flink/bin/sql-gateway.sh start-foreground \
+          -Dsql-gateway.endpoint.rest.address=0.0.0.0 \
+          -Dsql-gateway.endpoint.rest.port=8083 \
+          -Dsql-gateway.session.idle-timeout=0 \
+          -Dexecution.target=remote
+    ports:
+      - "8083:8083"
+    depends_on:
+      jobmanager:
+        condition: service_healthy
+      catalog-store-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./lib:/opt/flink/lib/extra:ro
+      - catalog-store:/opt/flink/catalog-store
+      - *fluss-remote
+    networks:
+      - lakehouse-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/v1/info"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+
+  # A one-page editor. The browser keeps one gateway session and reconnects to it after
+  # a reload, so the DDL an attendee ran is still there. The examples menu is built
+  # from flink_sql/: each ddl/ file, the explore.sql sections, and each job file.
+  #
+  # PRELOAD_DDL=true runs flink_sql/ddl/*.sql into each new session first, like
+  # `sql-client.sh -i`. Off by default, because attendees issue the DDL themselves.
+  #
+  # It also owns the tiering service's "deploy, then Start" flow (Lab 3, Step 11): it
+  # uploads the tiering JAR to the JobManager — which lists it under Submit New Job — and
+  # its header's Start button runs that JAR with tiering.args, over Flink's REST API.
+  sql-editor:
+    image: python:3.11-slim
+    hostname: sql-editor
+    environment:
+      TZ: UTC
+      GATEWAY_URL: http://sql-gateway:8083
+      FLINK_URL: http://jobmanager:8081
+      PRELOAD_DDL: "${PRELOAD_DDL:-false}"
+    depends_on:
+      sql-gateway:
+        condition: service_healthy
+    volumes:
+      - ./sql-editor:/app:ro
+      - ./flink_sql:/opt/sql:ro
+      - ./lib/tiering:/opt/tiering:ro
+      - ./tiering.args:/opt/tiering.args:ro
+    working_dir: /app
+    command: >
+      bash -c "pip install -r requirements.txt -q && python3 app.py"
+    ports:
+      - "8084:8084"
+    networks:
+      - lakehouse-net
+    restart: on-failure
+
+  # ── Environment homepage ─────────────────────────────────────────────────────
+  # One static page on port 80 with a card per web UI — each link built from the host
+  # the page was opened on, and a live reachability dot — plus the connection details.
+  # Pure static files; nothing is proxied, so every UI still keeps its own port.
+  homepage:
+    image: nginx:1.27-alpine
+    hostname: homepage
+    volumes:
+      - ./homepage:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
+    networks:
+      - lakehouse-net
+    restart: unless-stopped
+
+  # ── Order event generator ────────────────────────────────────────────────────
+
+  order-gen:
+    image: python:3.11-slim
+    environment:
+      # Pin UTC: event_time is a naive string from datetime.now(), so the container's
+      # zone silently defines what it means.
+      TZ: UTC
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      redpanda-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./datagen:/app:ro
+    working_dir: /app
+    command: >
+      bash -c "pip install -r requirements.txt -q && python3 order_events.py"
+    networks:
+      - lakehouse-net
+    restart: on-failure
+
+  # ── Grafana ──────────────────────────────────────────────────────────────────
+  # Datasource and dashboard are provisioned, so there is nothing to import by hand.
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    hostname: grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lakehouse-net
+
+networks:
+  lakehouse-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  catalog-db-data:
+  minio-data:
+  cloudbeaver-workspace:
+  flink-checkpoints:
+  catalog-store:
+  fluss-remote-data:

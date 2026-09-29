@@ -1,0 +1,18 @@
+apiVersion: 1
+
+datasources:
+  - name: lakehouse_dwh
+    uid: lakehouse_dwh
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres:5432
+    database: orders
+    user: root
+    secureJsonData:
+      password: admin1
+    jsonData:
+      sslmode: disable
+      database: orders
+      postgresVersion: 1500
+      timescaledb: false
+    isDefault: true

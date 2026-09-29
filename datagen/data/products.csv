@@ -1,0 +1,501 @@
+product_id,sku,product_name,category,brand,unit_price,cost,weight_kg,in_stock,rating,created_at
+PRD-00001,SKU-OIVG1043,Yang USB-C Speaker,Electronics,Yang,16.13,6.98,2.72,True,4.4,2024-07-12 00:00:00
+PRD-00002,SKU-OGMB0013,Gonzalez Wireless Earbuds,Electronics,Gonzalez,19.14,7.24,2.83,True,4.1,2025-01-03 00:00:00
+PRD-00003,SKU-ZAWZ3794,Wolfe USB-C Earbuds,Electronics,Wolfe,103.1,54.31,9.72,False,4.6,2024-12-15 00:00:00
+PRD-00004,SKU-GFYG4235,Abbott-Munoz HD Power Bank,Electronics,Abbott-Munoz,128.65,53.34,9.17,True,3.8,2024-01-03 00:00:00
+PRD-00005,SKU-YFJS0781,Montgomery Compact Power Bank,Electronics,Montgomery,273.66,162.04,8.77,True,4.9,2024-01-23 00:00:00
+PRD-00006,SKU-FOGY1034,Chavez-Flowers Wireless Router,Electronics,Chavez-Flowers,374.09,200.35,10.35,True,4.4,2023-02-16 00:00:00
+PRD-00007,SKU-QRSR2553,Jones USB-C Webcam,Electronics,Jones,349.02,225.32,10.27,True,3.8,2024-04-09 00:00:00
+PRD-00008,SKU-ROSJ3276,Cohen USB-C Power Bank,Electronics,Cohen,77.38,35.33,8.06,True,4.4,2023-03-15 00:00:00
+PRD-00009,SKU-RENK3056,Edwards Bluetooth Charger,Electronics,Edwards,242.69,102.77,5.57,True,4.9,2024-12-05 00:00:00
+PRD-00010,SKU-PVJI7242,Burgess-Patterson Bluetooth Webcam,Electronics,Burgess-Patterson,309.65,186.67,9.32,True,3.1,2023-11-20 00:00:00
+PRD-00011,SKU-IGFF9653,Callahan and Sons HD Router,Electronics,Callahan and Sons,34.45,21.49,6.83,True,3.4,2024-05-26 00:00:00
+PRD-00012,SKU-YYMD2691,King HD Monitor Stand,Electronics,King,68.58,26.88,8.95,True,4.5,2024-03-14 00:00:00
+PRD-00013,SKU-HSBK1845,Smith-Bowen Bluetooth Earbuds,Electronics,Smith-Bowen,166.09,107.83,1.7,True,4.5,2025-05-31 00:00:00
+PRD-00014,SKU-GOTO4828,Lynch Wireless Charger,Electronics,Lynch,284.21,167.01,5.09,False,3.8,2024-04-24 00:00:00
+PRD-00015,SKU-UFBH8809,Koch-Decker Bluetooth Router,Electronics,Koch-Decker,437.13,265.88,0.19,True,4.4,2024-07-03 00:00:00
+PRD-00016,SKU-KFFU4303,Cabrera-Spence Compact Router,Electronics,Cabrera-Spence,347.03,156.88,3.56,True,3.0,2025-01-09 00:00:00
+PRD-00017,SKU-JKQH8227,Henderson USB-C Router,Electronics,Henderson,437.49,253.13,6.12,True,4.3,2025-05-11 00:00:00
+PRD-00018,SKU-CHCH3465,Walker USB-C Webcam,Electronics,Walker,73.01,42.25,6.5,True,4.1,2023-01-01 00:00:00
+PRD-00019,SKU-LOAE0983,Welch Bluetooth Power Bank,Electronics,Welch,222.43,85.32,4.39,True,4.6,2023-09-03 00:00:00
+PRD-00020,SKU-RQFN5183,Anderson Wireless Webcam,Electronics,Anderson,395.71,250.91,1.07,True,3.1,2025-02-17 00:00:00
+PRD-00021,SKU-MGGQ7376,Gomez-Jenkins Bluetooth Charger,Electronics,Gomez-Jenkins,62.13,30.6,6.62,True,4.7,2024-03-09 00:00:00
+PRD-00022,SKU-UVZG0106,Lee PLC Portable Webcam,Electronics,Lee PLC,322.26,151.36,8.08,True,4.8,2024-04-07 00:00:00
+PRD-00023,SKU-RDPE7262,Morton-Chase Wireless Webcam,Electronics,Morton-Chase,104.99,47.4,7.08,True,3.4,2023-03-14 00:00:00
+PRD-00024,SKU-FWPK1080,Tucker-Lewis USB-C Headphones,Electronics,Tucker-Lewis,106.88,66.44,10.32,False,3.5,2024-11-16 00:00:00
+PRD-00025,SKU-AYQY6026,Mitchell-Horton HD Webcam,Electronics,Mitchell-Horton,244.96,138.89,10.59,True,3.5,2024-04-29 00:00:00
+PRD-00026,SKU-SNDL8723,Daniels Compact Earbuds,Electronics,Daniels,89.73,34.01,5.2,True,3.9,2025-01-16 00:00:00
+PRD-00027,SKU-KDGF9788,Jones Wireless Speaker,Electronics,Jones,31.97,18.17,9.62,True,3.4,2024-07-03 00:00:00
+PRD-00028,SKU-PLMC3619,Miller HD Charger,Electronics,Miller,192.74,83.57,3.04,True,3.9,2025-06-01 00:00:00
+PRD-00029,SKU-PQZI5435,Brewer Compact Speaker,Electronics,Brewer,27.51,17.88,10.04,True,4.9,2025-05-19 00:00:00
+PRD-00030,SKU-KGEI1079,Wagner and Sons Portable Charger,Electronics,Wagner and Sons,185.85,91.89,10.38,True,3.3,2023-01-03 00:00:00
+PRD-00031,SKU-SKCI5135,Turner HD Router,Electronics,Turner,417.3,244.35,3.46,True,4.5,2025-03-13 00:00:00
+PRD-00032,SKU-QGIQ8084,Preston Ltd Bluetooth Monitor Stand,Electronics,Preston Ltd,73.88,32.43,11.63,True,4.1,2025-02-04 00:00:00
+PRD-00033,SKU-MNTV8244,Watts Smart Headphones,Electronics,Watts,27.31,13.46,11.04,True,3.1,2024-06-04 00:00:00
+PRD-00034,SKU-FOBR8740,Smith and Sons Wireless Charger,Electronics,Smith and Sons,35.49,13.15,10.35,True,4.9,2024-08-06 00:00:00
+PRD-00035,SKU-TBJA4278,Jones Ltd Portable Headphones,Electronics,Jones Ltd,280.62,133.51,7.02,True,4.9,2023-07-29 00:00:00
+PRD-00036,SKU-LJJB2805,Williams USB-C Power Bank,Electronics,Williams,111.22,52.13,8.08,True,3.6,2025-02-08 00:00:00
+PRD-00037,SKU-QGWX0533,Henson Wireless Headphones,Electronics,Henson,208.94,135.71,11.95,False,3.4,2023-09-29 00:00:00
+PRD-00038,SKU-ABLV2322,Patton-Jenkins Portable Power Bank,Electronics,Patton-Jenkins,396.98,243.66,4.47,True,4.7,2024-12-21 00:00:00
+PRD-00039,SKU-YCEO3421,Velasquez Smart Headphones,Electronics,Velasquez,302.2,156.05,11.18,True,4.8,2023-09-28 00:00:00
+PRD-00040,SKU-BQMZ5433,Ramirez-Jones Wireless Speaker,Electronics,Ramirez-Jones,335.38,133.02,3.42,True,3.7,2024-12-04 00:00:00
+PRD-00041,SKU-RIVB4586,Wiley USB-C Router,Electronics,Wiley,229.91,97.79,10.9,False,4.3,2025-04-29 00:00:00
+PRD-00042,SKU-GMBW2940,Hartman Smart Headphones,Electronics,Hartman,6.58,3.83,7.66,True,4.5,2024-07-18 00:00:00
+PRD-00043,SKU-QCTB1693,Meyer PLC USB-C Earbuds,Electronics,Meyer PLC,254.6,97.65,11.34,True,3.3,2023-02-06 00:00:00
+PRD-00044,SKU-QVNU3561,Charles Compact Power Bank,Electronics,Charles,264.22,104.22,1.57,True,4.8,2025-03-26 00:00:00
+PRD-00045,SKU-SSJI4656,Fisher Compact Headphones,Electronics,Fisher,405.02,167.28,3.03,True,4.6,2025-06-14 00:00:00
+PRD-00046,SKU-ZJAT2994,Clark-Floyd HD Charger,Electronics,Clark-Floyd,416.96,175.55,1.99,True,3.4,2024-02-27 00:00:00
+PRD-00047,SKU-CRNG9577,Leon-Moyer Wireless Charger,Electronics,Leon-Moyer,332.77,149.63,11.17,True,4.7,2025-04-10 00:00:00
+PRD-00048,SKU-QONV2148,Cardenas and Sons Portable Router,Electronics,Cardenas and Sons,75.84,42.5,4.62,False,3.9,2023-07-24 00:00:00
+PRD-00049,SKU-BCPE4332,Atkinson Compact Monitor Stand,Electronics,Atkinson,160.6,95.74,10.46,True,4.3,2024-02-13 00:00:00
+PRD-00050,SKU-ZPJP9367,Smith Smart Router,Electronics,Smith,389.64,249.4,3.39,True,3.8,2025-05-13 00:00:00
+PRD-00051,SKU-ZSHD1632,Grant Reusable Cutting Board,Home & Kitchen,Grant,422.96,162.67,11.65,True,4.9,2023-09-29 00:00:00
+PRD-00052,SKU-JMUW7278,Salazar-Ball Stainless Steel Espresso Machine,Home & Kitchen,Salazar-Ball,270.47,122.71,9.45,True,5.0,2023-04-29 00:00:00
+PRD-00053,SKU-KVEC8687,Walton-Larsen Electric Kettle,Home & Kitchen,Walton-Larsen,89.59,32.55,5.26,True,4.6,2024-12-04 00:00:00
+PRD-00054,SKU-RCET4873,Young-Rogers Insulated Mixing Bowl,Home & Kitchen,Young-Rogers,332.98,136.23,5.2,True,4.8,2024-09-30 00:00:00
+PRD-00055,SKU-OYSJ8122,Lewis Ceramic Mixing Bowl,Home & Kitchen,Lewis,382.37,216.39,3.64,True,3.8,2024-02-17 00:00:00
+PRD-00056,SKU-AYXL7603,Smith Insulated Cutting Board,Home & Kitchen,Smith,251.71,102.58,8.0,True,4.5,2023-06-28 00:00:00
+PRD-00057,SKU-WYAI7054,Navarro Reusable Kettle,Home & Kitchen,Navarro,138.92,71.46,0.05,True,3.9,2024-08-16 00:00:00
+PRD-00058,SKU-FBYV7346,Shelton Reusable Mixing Bowl,Home & Kitchen,Shelton,148.4,71.61,8.12,True,4.6,2025-03-26 00:00:00
+PRD-00059,SKU-BZLK7298,Johnson Insulated Blender,Home & Kitchen,Johnson,298.19,129.75,7.98,True,3.2,2025-02-08 00:00:00
+PRD-00060,SKU-YUND7204,Rogers-Hobbs Non-Stick Mixing Bowl,Home & Kitchen,Rogers-Hobbs,143.14,84.73,1.81,False,5.0,2024-09-17 00:00:00
+PRD-00061,SKU-EBVI4641,Cooke Stainless Steel Knife Set,Home & Kitchen,Cooke,189.43,102.09,2.37,True,4.0,2023-09-07 00:00:00
+PRD-00062,SKU-PMBN3100,Allen Non-Stick Mixing Bowl,Home & Kitchen,Allen,310.99,192.13,10.33,True,4.6,2023-08-13 00:00:00
+PRD-00063,SKU-SQXX1937,Obrien Ltd Non-Stick Air Fryer,Home & Kitchen,Obrien Ltd,431.29,217.97,0.65,True,4.7,2024-04-12 00:00:00
+PRD-00064,SKU-LBTK1241,Odonnell Non-Stick Air Fryer,Home & Kitchen,Odonnell,211.77,107.86,6.73,True,4.5,2024-03-29 00:00:00
+PRD-00065,SKU-GSXT3193,Burke Reusable Air Fryer,Home & Kitchen,Burke,325.08,163.01,9.98,True,4.8,2025-01-31 00:00:00
+PRD-00066,SKU-QXEG0586,Peterson Electric Knife Set,Home & Kitchen,Peterson,120.34,51.04,7.67,True,4.0,2024-10-03 00:00:00
+PRD-00067,SKU-TJBL1657,Boyd Non-Stick Cutting Board,Home & Kitchen,Boyd,200.74,113.23,2.85,True,4.8,2023-03-24 00:00:00
+PRD-00068,SKU-ULRU8776,Rivas Non-Stick Blender,Home & Kitchen,Rivas,107.91,60.23,8.49,False,3.8,2024-07-09 00:00:00
+PRD-00069,SKU-KNQY4737,Johnson-Rosales Electric Knife Set,Home & Kitchen,Johnson-Rosales,32.71,19.62,4.7,True,4.9,2023-01-21 00:00:00
+PRD-00070,SKU-ZQVR2735,Haynes Reusable Knife Set,Home & Kitchen,Haynes,217.26,137.49,3.62,True,4.8,2025-05-05 00:00:00
+PRD-00071,SKU-FJWP3136,Alvarez Electric Kettle,Home & Kitchen,Alvarez,337.64,173.49,7.26,True,3.4,2024-03-22 00:00:00
+PRD-00072,SKU-ZSPT0143,Perkins Electric Espresso Machine,Home & Kitchen,Perkins,178.04,98.04,9.59,True,4.7,2023-05-11 00:00:00
+PRD-00073,SKU-SDRT6855,Hall-Griffith Reusable Kettle,Home & Kitchen,Hall-Griffith,17.0,7.96,6.79,False,4.3,2023-05-19 00:00:00
+PRD-00074,SKU-MNVE5182,Hardy-Bray Electric Blender,Home & Kitchen,Hardy-Bray,27.38,12.7,2.58,True,4.5,2024-01-24 00:00:00
+PRD-00075,SKU-MSOX8941,Turner Ltd Ceramic Air Fryer,Home & Kitchen,Turner Ltd,428.29,204.07,10.03,True,4.5,2023-02-23 00:00:00
+PRD-00076,SKU-DJSS8240,Little Ceramic Blender,Home & Kitchen,Little,294.31,171.99,7.84,True,4.9,2023-07-24 00:00:00
+PRD-00077,SKU-EECV1094,Sheppard Stainless Steel Kettle,Home & Kitchen,Sheppard,72.81,28.24,8.05,True,3.4,2024-12-17 00:00:00
+PRD-00078,SKU-FEKO7116,Brown Ceramic Air Fryer,Home & Kitchen,Brown,169.16,89.95,11.57,True,4.6,2023-06-17 00:00:00
+PRD-00079,SKU-JWAM4131,Gibbs Ceramic Espresso Machine,Home & Kitchen,Gibbs,262.51,165.03,6.93,True,3.8,2025-01-02 00:00:00
+PRD-00080,SKU-BTKN7749,Lynch Ltd Non-Stick Espresso Machine,Home & Kitchen,Lynch Ltd,268.48,160.87,2.95,True,3.6,2024-12-01 00:00:00
+PRD-00081,SKU-QFKP1334,Arnold and Sons Reusable Air Fryer,Home & Kitchen,Arnold and Sons,58.87,37.98,9.4,True,3.9,2024-01-15 00:00:00
+PRD-00082,SKU-ESCO0679,Mann-Warner Stainless Steel Kettle,Home & Kitchen,Mann-Warner,293.16,103.72,5.07,True,3.9,2024-01-06 00:00:00
+PRD-00083,SKU-YYOL7134,Lara Insulated Air Fryer,Home & Kitchen,Lara,209.58,82.97,2.15,True,4.3,2024-09-22 00:00:00
+PRD-00084,SKU-EDKY3242,Larson-Holloway Reusable Air Fryer,Home & Kitchen,Larson-Holloway,220.16,105.82,8.79,True,4.7,2025-04-30 00:00:00
+PRD-00085,SKU-STSZ4717,Mason-Snyder Stainless Steel Cutting Board,Home & Kitchen,Mason-Snyder,397.33,168.13,5.6,True,3.8,2023-01-30 00:00:00
+PRD-00086,SKU-VUMQ1906,Davis Ltd Electric Air Fryer,Home & Kitchen,Davis Ltd,149.63,74.26,4.29,True,3.6,2024-09-02 00:00:00
+PRD-00087,SKU-KCWW9904,Ruiz Ltd Insulated Cutting Board,Home & Kitchen,Ruiz Ltd,252.33,127.42,2.33,True,3.8,2024-07-22 00:00:00
+PRD-00088,SKU-BOFF7429,Bailey-Cook Non-Stick Mixing Bowl,Home & Kitchen,Bailey-Cook,216.86,122.21,5.41,False,3.6,2024-02-19 00:00:00
+PRD-00089,SKU-SFSQ1256,Cervantes-Pierce Insulated Blender,Home & Kitchen,Cervantes-Pierce,141.26,74.09,5.71,True,3.9,2025-02-02 00:00:00
+PRD-00090,SKU-UHXZ7154,Bryan Reusable Cutting Board,Home & Kitchen,Bryan,161.56,78.54,3.71,True,4.4,2023-11-20 00:00:00
+PRD-00091,SKU-HXNW7603,Garrett-Wolf Stainless Steel Mixing Bowl,Home & Kitchen,Garrett-Wolf,243.46,140.88,2.26,True,4.0,2025-01-11 00:00:00
+PRD-00092,SKU-SCSF3482,Johnson Ltd Reusable Air Fryer,Home & Kitchen,Johnson Ltd,238.46,103.71,1.25,True,3.5,2023-07-03 00:00:00
+PRD-00093,SKU-JAJA9324,Walker Ceramic Espresso Machine,Home & Kitchen,Walker,320.07,124.18,0.59,False,3.6,2023-05-10 00:00:00
+PRD-00094,SKU-TSGT7127,Perry-Olson Insulated Air Fryer,Home & Kitchen,Perry-Olson,339.99,129.46,0.2,True,4.0,2023-12-15 00:00:00
+PRD-00095,SKU-JYMM7378,Francis Non-Stick Espresso Machine,Home & Kitchen,Francis,117.35,71.41,1.41,False,4.0,2024-08-13 00:00:00
+PRD-00096,SKU-ASUT6584,Carpenter Insulated Mixing Bowl,Home & Kitchen,Carpenter,28.86,11.39,6.78,True,5.0,2023-05-02 00:00:00
+PRD-00097,SKU-VJWI7875,Gibson-Morris Reusable Air Fryer,Home & Kitchen,Gibson-Morris,190.2,100.58,7.44,True,3.8,2024-03-29 00:00:00
+PRD-00098,SKU-OXAC3396,Garner-Thornton Ceramic Air Fryer,Home & Kitchen,Garner-Thornton,266.89,127.75,6.85,False,4.9,2023-04-12 00:00:00
+PRD-00099,SKU-CIGL6627,Kane-Sawyer Non-Stick Mixing Bowl,Home & Kitchen,Kane-Sawyer,98.91,54.22,1.93,True,3.2,2023-01-03 00:00:00
+PRD-00100,SKU-AUJA7187,Booker Electric Knife Set,Home & Kitchen,Booker,311.77,153.07,0.44,True,3.6,2025-05-30 00:00:00
+PRD-00101,SKU-PFVR4596,James Classic Running Shoes,Apparel,James,310.89,194.98,9.46,True,4.3,2023-07-22 00:00:00
+PRD-00102,SKU-EPOR7809,Bright-Francis Classic Running Shoes,Apparel,Bright-Francis,247.33,134.62,10.91,True,3.1,2023-06-19 00:00:00
+PRD-00103,SKU-KSTB6117,Nguyen Lightweight Rain Jacket,Apparel,Nguyen,338.29,176.17,3.5,True,4.4,2024-12-17 00:00:00
+PRD-00104,SKU-JPHA4556,Maldonado Classic Denim Jacket,Apparel,Maldonado,227.71,113.43,1.01,False,3.9,2023-11-27 00:00:00
+PRD-00105,SKU-FLJO9693,Little-Stevens Waterproof Denim Jacket,Apparel,Little-Stevens,16.51,6.91,8.11,True,4.2,2023-01-22 00:00:00
+PRD-00106,SKU-KECW0748,Evans Merino Wool Baseball Cap,Apparel,Evans,124.93,45.23,9.09,True,4.3,2023-10-12 00:00:00
+PRD-00107,SKU-EGPY7436,Howard Organic Cotton Rain Jacket,Apparel,Howard,198.97,118.24,11.63,True,3.8,2023-11-25 00:00:00
+PRD-00108,SKU-KRXV0640,Lozano Ltd Merino Wool Running Shoes,Apparel,Lozano Ltd,386.69,173.6,8.34,True,4.9,2025-04-13 00:00:00
+PRD-00109,SKU-ZWOO7439,Oliver Ltd Waterproof Running Shoes,Apparel,Oliver Ltd,207.4,92.16,3.91,True,3.8,2024-06-10 00:00:00
+PRD-00110,SKU-YCCL2104,Oconnor-Davis Slim-Fit Socks,Apparel,Oconnor-Davis,391.87,191.46,0.7,True,4.2,2024-05-25 00:00:00
+PRD-00111,SKU-MIYI4562,Schmidt-Mcintyre Merino Wool T-Shirt,Apparel,Schmidt-Mcintyre,343.2,141.08,6.61,True,3.9,2024-12-16 00:00:00
+PRD-00112,SKU-VVZH2474,Mccarty-Taylor Classic Running Shoes,Apparel,Mccarty-Taylor,17.85,9.62,9.6,True,3.6,2023-01-15 00:00:00
+PRD-00113,SKU-FYZA3685,Herrera-Gibson Waterproof T-Shirt,Apparel,Herrera-Gibson,46.48,30.1,10.96,True,3.2,2025-05-02 00:00:00
+PRD-00114,SKU-GROE4965,Harvey PLC Organic Cotton T-Shirt,Apparel,Harvey PLC,420.03,183.79,8.48,True,4.0,2024-04-28 00:00:00
+PRD-00115,SKU-ODST5931,Ortiz Organic Cotton T-Shirt,Apparel,Ortiz,250.31,116.41,11.07,True,4.8,2025-06-03 00:00:00
+PRD-00116,SKU-PIIY4711,Watson-Avery Slim-Fit Denim Jacket,Apparel,Watson-Avery,348.84,211.51,4.11,True,3.5,2023-01-03 00:00:00
+PRD-00117,SKU-APGF8692,Russell Lightweight Socks,Apparel,Russell,137.86,72.53,11.99,True,3.3,2024-07-05 00:00:00
+PRD-00118,SKU-PXGR5377,Stephens-Levine Classic Denim Jacket,Apparel,Stephens-Levine,152.94,88.53,4.56,True,4.7,2024-12-15 00:00:00
+PRD-00119,SKU-MHDF5064,Lewis Organic Cotton Rain Jacket,Apparel,Lewis,175.42,106.45,4.96,True,3.9,2025-04-10 00:00:00
+PRD-00120,SKU-YKNE0532,Clark Classic T-Shirt,Apparel,Clark,444.84,261.44,7.84,True,4.9,2023-05-10 00:00:00
+PRD-00121,SKU-RJII5290,Lindsey-Rodriguez Waterproof Rain Jacket,Apparel,Lindsey-Rodriguez,152.74,58.06,10.15,True,4.8,2023-01-16 00:00:00
+PRD-00122,SKU-YYPL0205,Smith-Baker Merino Wool Hoodie,Apparel,Smith-Baker,187.44,102.42,1.89,True,4.9,2023-12-13 00:00:00
+PRD-00123,SKU-VEEC2681,Palmer-Rodriguez Waterproof Socks,Apparel,Palmer-Rodriguez,181.88,68.04,3.98,True,4.1,2023-11-21 00:00:00
+PRD-00124,SKU-UYQH8390,Ellis-Maynard Merino Wool Socks,Apparel,Ellis-Maynard,399.91,198.51,6.52,True,3.5,2024-12-01 00:00:00
+PRD-00125,SKU-RGFT0766,Jones-Miller Lightweight Hoodie,Apparel,Jones-Miller,337.31,161.97,1.23,True,4.7,2024-03-30 00:00:00
+PRD-00126,SKU-RNOL9212,Joseph Organic Cotton Socks,Apparel,Joseph,138.26,49.59,3.93,False,3.7,2024-03-17 00:00:00
+PRD-00127,SKU-BGYS4789,Farrell Ltd Organic Cotton Hoodie,Apparel,Farrell Ltd,241.37,125.46,9.52,True,3.2,2025-06-10 00:00:00
+PRD-00128,SKU-OAVD8367,Perry-Davis Classic Rain Jacket,Apparel,Perry-Davis,308.99,154.28,7.02,True,4.3,2024-04-15 00:00:00
+PRD-00129,SKU-JREE6545,Decker Lightweight Socks,Apparel,Decker,9.18,5.43,10.82,True,3.3,2024-03-28 00:00:00
+PRD-00130,SKU-JDLJ6152,Rivera Lightweight Rain Jacket,Apparel,Rivera,138.12,88.2,8.3,True,3.6,2024-01-29 00:00:00
+PRD-00131,SKU-TWGK6049,Lewis Classic Running Shoes,Apparel,Lewis,110.56,57.67,6.92,True,3.6,2025-04-29 00:00:00
+PRD-00132,SKU-HWRK1585,Aguirre PLC Merino Wool T-Shirt,Apparel,Aguirre PLC,127.14,66.08,8.25,True,3.1,2024-09-12 00:00:00
+PRD-00133,SKU-MQSR9980,White Ltd Merino Wool T-Shirt,Apparel,White Ltd,375.61,233.21,9.32,True,4.6,2023-08-13 00:00:00
+PRD-00134,SKU-LJKQ4550,Jones-Figueroa Merino Wool Hoodie,Apparel,Jones-Figueroa,281.3,155.65,8.67,True,4.7,2024-10-05 00:00:00
+PRD-00135,SKU-YADV0183,Wood Ltd Slim-Fit Socks,Apparel,Wood Ltd,292.62,129.54,5.32,True,4.5,2023-04-03 00:00:00
+PRD-00136,SKU-DJKW5991,Williams Lightweight Denim Jacket,Apparel,Williams,337.63,135.96,1.63,True,4.9,2024-06-27 00:00:00
+PRD-00137,SKU-ARNW6797,Wilson Waterproof Denim Jacket,Apparel,Wilson,374.56,159.97,9.91,True,4.6,2025-02-03 00:00:00
+PRD-00138,SKU-COZM9784,Smith Lightweight Baseball Cap,Apparel,Smith,56.25,35.94,1.73,True,4.7,2025-01-11 00:00:00
+PRD-00139,SKU-UHAF3244,Jordan Merino Wool T-Shirt,Apparel,Jordan,435.44,257.51,4.42,True,3.0,2024-07-03 00:00:00
+PRD-00140,SKU-EZVC3885,Smith-Morse Slim-Fit T-Shirt,Apparel,Smith-Morse,169.02,97.14,3.18,True,4.3,2024-01-16 00:00:00
+PRD-00141,SKU-ZTOA5969,Wilson-Smith Slim-Fit Socks,Apparel,Wilson-Smith,109.05,38.99,10.62,True,4.8,2023-08-15 00:00:00
+PRD-00142,SKU-SXFB5297,Sanchez PLC Merino Wool Running Shoes,Apparel,Sanchez PLC,287.75,140.79,8.43,True,3.2,2023-02-16 00:00:00
+PRD-00143,SKU-TVVO6816,Maxwell-Jones Slim-Fit Denim Jacket,Apparel,Maxwell-Jones,448.19,172.48,2.86,True,3.8,2024-01-15 00:00:00
+PRD-00144,SKU-XWWU1883,Briggs Merino Wool Socks,Apparel,Briggs,314.94,161.27,7.07,True,4.8,2024-11-01 00:00:00
+PRD-00145,SKU-WWPE3292,Bean Ltd Slim-Fit Baseball Cap,Apparel,Bean Ltd,222.76,105.24,11.42,False,3.7,2024-03-30 00:00:00
+PRD-00146,SKU-CRKP7799,Downs Classic Hoodie,Apparel,Downs,385.68,146.48,8.24,True,5.0,2024-01-03 00:00:00
+PRD-00147,SKU-ECOT5271,Vargas-Bell Slim-Fit T-Shirt,Apparel,Vargas-Bell,127.77,81.83,11.39,True,3.2,2023-08-06 00:00:00
+PRD-00148,SKU-CDXS1477,Newman Merino Wool Socks,Apparel,Newman,270.73,96.49,9.45,True,3.3,2024-08-01 00:00:00
+PRD-00149,SKU-DLJY9986,Huang Organic Cotton Running Shoes,Apparel,Huang,374.27,193.22,7.06,True,3.5,2025-03-03 00:00:00
+PRD-00150,SKU-GJDC3597,Shepherd Organic Cotton Baseball Cap,Apparel,Shepherd,405.74,142.35,10.31,True,3.3,2023-09-14 00:00:00
+PRD-00151,SKU-PTCC1820,Mills Foldable Yoga Mat,Sports & Outdoors,Mills,299.17,107.02,0.23,True,3.5,2023-11-28 00:00:00
+PRD-00152,SKU-RMDY4665,Holland Adjustable Camping Tent,Sports & Outdoors,Holland,123.09,47.76,5.08,True,3.1,2024-04-04 00:00:00
+PRD-00153,SKU-JVFL6449,Thomas Non-Slip Hiking Backpack,Sports & Outdoors,Thomas,269.18,130.71,2.7,True,4.5,2025-06-06 00:00:00
+PRD-00154,SKU-TJYP6291,Li-Santiago Ultralight Water Bottle,Sports & Outdoors,Li-Santiago,208.83,133.49,0.78,True,3.8,2024-12-03 00:00:00
+PRD-00155,SKU-XBXT8168,Bean Adjustable Resistance Bands,Sports & Outdoors,Bean,322.02,155.56,10.8,True,3.3,2023-05-10 00:00:00
+PRD-00156,SKU-JESY7332,Romero PLC Non-Slip Hiking Backpack,Sports & Outdoors,Romero PLC,286.72,147.52,3.94,True,4.1,2024-04-09 00:00:00
+PRD-00157,SKU-IMYJ8059,White Ltd Ultralight Hiking Backpack,Sports & Outdoors,White Ltd,196.44,115.49,1.42,True,4.8,2024-07-18 00:00:00
+PRD-00158,SKU-AXRU9270,Montes PLC Foldable Resistance Bands,Sports & Outdoors,Montes PLC,205.94,86.2,4.1,True,3.8,2023-04-08 00:00:00
+PRD-00159,SKU-PTZY4738,Mckee-Lee Non-Slip Resistance Bands,Sports & Outdoors,Mckee-Lee,144.07,61.44,11.45,True,3.9,2023-04-04 00:00:00
+PRD-00160,SKU-XYGH9774,Burch-Montoya Adjustable Yoga Mat,Sports & Outdoors,Burch-Montoya,197.19,113.06,4.5,True,3.1,2024-07-29 00:00:00
+PRD-00161,SKU-PEXJ9240,Dawson PLC Ultralight Water Bottle,Sports & Outdoors,Dawson PLC,303.16,143.47,10.49,True,3.8,2025-01-08 00:00:00
+PRD-00162,SKU-RCGJ1412,Davis-Lozano Adjustable Water Bottle,Sports & Outdoors,Davis-Lozano,272.18,123.98,6.96,True,4.3,2023-08-18 00:00:00
+PRD-00163,SKU-DZGX7506,Hughes Adjustable Water Bottle,Sports & Outdoors,Hughes,381.19,175.45,9.16,True,4.6,2025-05-15 00:00:00
+PRD-00164,SKU-GTPV5305,Taylor Ultralight Hiking Backpack,Sports & Outdoors,Taylor,278.04,150.92,0.36,True,4.7,2023-10-01 00:00:00
+PRD-00165,SKU-NAFB7277,Lewis-Hernandez Adjustable Camping Tent,Sports & Outdoors,Lewis-Hernandez,126.61,73.27,11.06,True,3.4,2023-05-27 00:00:00
+PRD-00166,SKU-XSPT9861,Williams Ultralight Bike Helmet,Sports & Outdoors,Williams,183.35,71.98,7.62,False,4.5,2023-08-09 00:00:00
+PRD-00167,SKU-FMIB9711,Robertson Heavy-Duty Resistance Bands,Sports & Outdoors,Robertson,206.87,82.17,3.77,True,4.9,2024-09-02 00:00:00
+PRD-00168,SKU-PKAL6095,Barnett Adjustable Yoga Mat,Sports & Outdoors,Barnett,74.23,42.78,0.64,True,3.9,2024-03-10 00:00:00
+PRD-00169,SKU-JBYE8888,Reid Heavy-Duty Hiking Backpack,Sports & Outdoors,Reid,201.71,87.13,9.07,True,3.9,2023-10-18 00:00:00
+PRD-00170,SKU-WPUQ4051,Garcia Ultralight Resistance Bands,Sports & Outdoors,Garcia,239.49,105.98,2.69,True,3.1,2023-07-29 00:00:00
+PRD-00171,SKU-VPLX2058,Marshall Non-Slip Camping Tent,Sports & Outdoors,Marshall,346.47,200.69,3.51,True,4.0,2024-03-16 00:00:00
+PRD-00172,SKU-SMCY2170,Blackwell Foldable Camping Tent,Sports & Outdoors,Blackwell,174.19,97.74,6.03,True,4.6,2023-03-15 00:00:00
+PRD-00173,SKU-EQCW4868,Lee Heavy-Duty Bike Helmet,Sports & Outdoors,Lee,23.82,8.47,11.06,True,4.2,2024-08-10 00:00:00
+PRD-00174,SKU-BZVC5415,Morgan-Lopez Heavy-Duty Bike Helmet,Sports & Outdoors,Morgan-Lopez,289.86,126.63,4.89,True,3.3,2024-09-24 00:00:00
+PRD-00175,SKU-ZFUB7584,Jordan and Sons Heavy-Duty Bike Helmet,Sports & Outdoors,Jordan and Sons,414.3,155.96,10.14,True,4.2,2024-06-20 00:00:00
+PRD-00176,SKU-FUQS8451,Griffin-Robbins Adjustable Resistance Bands,Sports & Outdoors,Griffin-Robbins,392.38,225.12,2.7,True,3.2,2024-10-10 00:00:00
+PRD-00177,SKU-CUWN2757,Hill-Whitney Adjustable Hiking Backpack,Sports & Outdoors,Hill-Whitney,231.93,144.21,4.23,True,4.6,2025-04-14 00:00:00
+PRD-00178,SKU-GZVR0165,Cisneros and Sons Foldable Camping Tent,Sports & Outdoors,Cisneros and Sons,50.75,21.66,2.12,True,4.5,2023-03-19 00:00:00
+PRD-00179,SKU-EPXP9702,Cox-Herring Foldable Bike Helmet,Sports & Outdoors,Cox-Herring,224.88,129.61,9.13,True,4.8,2024-08-01 00:00:00
+PRD-00180,SKU-XXCW0927,Berry PLC Ultralight Water Bottle,Sports & Outdoors,Berry PLC,389.59,209.66,1.85,False,3.9,2023-11-07 00:00:00
+PRD-00181,SKU-PHBV5654,Porter Non-Slip Hiking Backpack,Sports & Outdoors,Porter,30.0,15.07,3.76,True,3.1,2025-05-01 00:00:00
+PRD-00182,SKU-TCNN8144,Benson-Lutz Non-Slip Yoga Mat,Sports & Outdoors,Benson-Lutz,291.88,187.74,1.13,True,3.8,2024-08-17 00:00:00
+PRD-00183,SKU-CLTC3121,Cochran Ultralight Bike Helmet,Sports & Outdoors,Cochran,403.67,195.75,9.73,True,3.6,2024-05-02 00:00:00
+PRD-00184,SKU-STKT5188,Ho Ultralight Camping Tent,Sports & Outdoors,Ho,431.19,209.19,9.74,True,5.0,2023-03-28 00:00:00
+PRD-00185,SKU-YIPY8313,Johnson-Spencer Ultralight Bike Helmet,Sports & Outdoors,Johnson-Spencer,81.79,34.71,5.28,True,4.0,2023-06-12 00:00:00
+PRD-00186,SKU-NFET5782,Key-Higgins Non-Slip Water Bottle,Sports & Outdoors,Key-Higgins,413.48,192.77,9.3,True,3.1,2024-10-08 00:00:00
+PRD-00187,SKU-EIUP8669,Cole Ltd Non-Slip Yoga Mat,Sports & Outdoors,Cole Ltd,151.71,78.49,4.67,True,4.7,2024-09-09 00:00:00
+PRD-00188,SKU-OLLX8528,Reynolds Foldable Water Bottle,Sports & Outdoors,Reynolds,41.27,22.66,11.01,True,4.3,2024-11-09 00:00:00
+PRD-00189,SKU-KKUT1824,Reed PLC Heavy-Duty Camping Tent,Sports & Outdoors,Reed PLC,269.79,170.35,3.75,True,4.6,2025-04-12 00:00:00
+PRD-00190,SKU-OJRI4143,Turner Foldable Bike Helmet,Sports & Outdoors,Turner,317.76,201.5,11.97,True,3.2,2024-11-17 00:00:00
+PRD-00191,SKU-KQNU2992,Morgan Heavy-Duty Hiking Backpack,Sports & Outdoors,Morgan,166.01,76.16,2.2,True,4.9,2024-05-12 00:00:00
+PRD-00192,SKU-QPNX0109,Butler Foldable Camping Tent,Sports & Outdoors,Butler,449.99,178.41,3.58,True,4.0,2024-07-06 00:00:00
+PRD-00193,SKU-PZZR8447,Evans-Jones Ultralight Yoga Mat,Sports & Outdoors,Evans-Jones,299.56,183.61,7.44,True,3.3,2023-07-05 00:00:00
+PRD-00194,SKU-EDNV0276,Thomas Ultralight Camping Tent,Sports & Outdoors,Thomas,325.93,118.35,4.4,True,4.9,2024-09-17 00:00:00
+PRD-00195,SKU-GJGU5625,Owens Non-Slip Bike Helmet,Sports & Outdoors,Owens,353.79,148.66,2.91,True,4.6,2025-05-05 00:00:00
+PRD-00196,SKU-DSYN7321,Wright-Grimes Foldable Water Bottle,Sports & Outdoors,Wright-Grimes,306.85,159.91,5.32,True,4.6,2024-05-29 00:00:00
+PRD-00197,SKU-MWKF2595,Owens Ultralight Resistance Bands,Sports & Outdoors,Owens,434.99,258.85,9.63,True,3.5,2024-10-18 00:00:00
+PRD-00198,SKU-PNLW1687,Williams Heavy-Duty Water Bottle,Sports & Outdoors,Williams,251.77,95.87,10.16,True,3.6,2025-02-20 00:00:00
+PRD-00199,SKU-AGBI9748,Luna-Gallagher Foldable Water Bottle,Sports & Outdoors,Luna-Gallagher,204.95,103.3,9.98,True,4.8,2025-04-16 00:00:00
+PRD-00200,SKU-KJMX5060,Roberts Heavy-Duty Water Bottle,Sports & Outdoors,Roberts,419.06,198.83,4.79,True,3.8,2023-03-25 00:00:00
+PRD-00201,SKU-HIGZ8499,Norton-Morgan Collector's Edition Cookbook,Books,Norton-Morgan,17.54,11.04,10.08,True,4.6,2023-05-21 00:00:00
+PRD-00202,SKU-GZGC5239,Williams Ltd Illustrated Field Guide,Books,Williams Ltd,413.24,203.21,9.98,True,3.9,2024-09-22 00:00:00
+PRD-00203,SKU-JMGI5787,Velazquez-Flores Illustrated Novel,Books,Velazquez-Flores,13.46,5.58,1.84,True,4.2,2024-03-09 00:00:00
+PRD-00204,SKU-VGGI6949,Erickson-Evans Illustrated Field Guide,Books,Erickson-Evans,110.75,42.81,2.9,True,4.2,2023-03-06 00:00:00
+PRD-00205,SKU-ALTY0551,Wiggins Illustrated Biography,Books,Wiggins,270.55,96.03,6.21,True,3.3,2024-03-15 00:00:00
+PRD-00206,SKU-UDLE4993,Warren Ltd Illustrated Short Story Collection,Books,Warren Ltd,162.0,84.43,2.29,True,4.0,2024-01-05 00:00:00
+PRD-00207,SKU-CKSH9623,Smith Illustrated Short Story Collection,Books,Smith,247.12,144.79,6.12,False,4.7,2023-02-14 00:00:00
+PRD-00208,SKU-AGXN6263,Salas-Fitzgerald Annotated Field Guide,Books,Salas-Fitzgerald,117.87,41.83,9.47,True,4.5,2024-10-05 00:00:00
+PRD-00209,SKU-JUQE0283,Bennett Illustrated Short Story Collection,Books,Bennett,332.16,149.39,0.58,True,4.6,2023-06-29 00:00:00
+PRD-00210,SKU-RXUR8585,Lara Annotated Travel Guide,Books,Lara,217.95,88.2,1.66,True,4.9,2023-02-07 00:00:00
+PRD-00211,SKU-OTXS3484,Clark Collector's Edition Cookbook,Books,Clark,24.49,10.04,0.55,True,4.0,2025-04-14 00:00:00
+PRD-00212,SKU-HKRI5844,Huang-Foster Annotated Field Guide,Books,Huang-Foster,21.3,11.59,3.47,True,3.1,2024-11-02 00:00:00
+PRD-00213,SKU-STFW5240,Douglas-Burgess Collector's Edition Field Guide,Books,Douglas-Burgess,60.39,27.8,10.68,True,4.8,2024-01-31 00:00:00
+PRD-00214,SKU-JSRI3384,Gilbert PLC Collector's Edition Cookbook,Books,Gilbert PLC,225.81,112.74,11.1,True,4.6,2025-01-14 00:00:00
+PRD-00215,SKU-OOOD3308,Gutierrez Ltd Annotated Novel,Books,Gutierrez Ltd,196.62,127.51,2.21,True,3.2,2023-12-02 00:00:00
+PRD-00216,SKU-JKAP7120,Woods-Gonzalez Collector's Edition Field Guide,Books,Woods-Gonzalez,203.43,115.0,2.04,True,3.9,2025-01-14 00:00:00
+PRD-00217,SKU-XFPK4540,Nichols Ltd Collector's Edition Short Story Collection,Books,Nichols Ltd,449.18,194.21,11.76,True,3.2,2024-10-14 00:00:00
+PRD-00218,SKU-CZYF0262,Zuniga Annotated Field Guide,Books,Zuniga,233.32,134.15,1.96,False,4.7,2024-11-25 00:00:00
+PRD-00219,SKU-MGVS0049,Hays-Daniels Annotated Novel,Books,Hays-Daniels,61.17,25.74,7.76,True,4.9,2023-02-03 00:00:00
+PRD-00220,SKU-RMZH7287,Martin-Stevens Bestselling Travel Guide,Books,Martin-Stevens,205.22,94.67,5.36,False,3.3,2024-01-11 00:00:00
+PRD-00221,SKU-YSKR4205,Thompson Ltd Annotated Field Guide,Books,Thompson Ltd,294.05,124.94,1.41,True,4.0,2024-02-01 00:00:00
+PRD-00222,SKU-FZQG6685,Holden Illustrated Field Guide,Books,Holden,349.86,196.35,2.61,True,4.4,2024-05-17 00:00:00
+PRD-00223,SKU-YPCW5304,Finley-Turner Bestselling Novel,Books,Finley-Turner,65.4,24.34,2.11,True,5.0,2025-04-09 00:00:00
+PRD-00224,SKU-SPDQ9045,Marshall and Sons Collector's Edition Travel Guide,Books,Marshall and Sons,159.6,58.97,6.53,True,4.7,2024-12-29 00:00:00
+PRD-00225,SKU-OSXN6841,Robinson and Sons Bestselling Field Guide,Books,Robinson and Sons,231.4,89.41,2.45,True,4.6,2023-01-27 00:00:00
+PRD-00226,SKU-XASJ7279,Todd-Pham Collector's Edition Short Story Collection,Books,Todd-Pham,259.66,127.29,11.8,True,4.8,2023-03-09 00:00:00
+PRD-00227,SKU-HCHT3391,Miller-Elliott Collector's Edition Biography,Books,Miller-Elliott,449.82,254.45,6.33,True,4.6,2023-03-17 00:00:00
+PRD-00228,SKU-KIJK0883,Bond-Ramos Bestselling Field Guide,Books,Bond-Ramos,290.84,141.06,8.18,True,4.8,2025-03-09 00:00:00
+PRD-00229,SKU-GCZD3971,Anderson-Perry Bestselling Cookbook,Books,Anderson-Perry,197.52,123.1,0.71,True,3.3,2023-06-18 00:00:00
+PRD-00230,SKU-RZTU9087,Foster Bestselling Field Guide,Books,Foster,420.96,175.81,11.37,True,3.6,2023-03-22 00:00:00
+PRD-00231,SKU-BWSE3910,Mcknight Collector's Edition Cookbook,Books,Mcknight,287.6,148.19,1.55,True,4.1,2024-05-29 00:00:00
+PRD-00232,SKU-LXIX7046,Good Bestselling Short Story Collection,Books,Good,424.02,168.02,7.92,True,4.2,2025-05-12 00:00:00
+PRD-00233,SKU-FRQI6766,Valdez Illustrated Novel,Books,Valdez,41.14,26.11,9.26,True,3.4,2024-08-08 00:00:00
+PRD-00234,SKU-HIUO1286,Avila Annotated Short Story Collection,Books,Avila,289.35,144.5,7.54,True,4.9,2024-05-09 00:00:00
+PRD-00235,SKU-YOPD7868,Moore-Lopez Bestselling Travel Guide,Books,Moore-Lopez,185.71,90.27,8.28,True,3.8,2024-04-20 00:00:00
+PRD-00236,SKU-XBPN1069,Garcia Bestselling Field Guide,Books,Garcia,274.96,122.02,8.63,True,4.7,2024-02-13 00:00:00
+PRD-00237,SKU-VCZC7903,Fernandez Bestselling Field Guide,Books,Fernandez,234.17,89.42,2.94,True,3.9,2023-05-25 00:00:00
+PRD-00238,SKU-UKUK2843,Barton Illustrated Novel,Books,Barton,134.14,62.41,7.4,True,4.7,2023-06-13 00:00:00
+PRD-00239,SKU-TRDJ2836,Hobbs Collector's Edition Short Story Collection,Books,Hobbs,325.9,132.63,1.95,True,3.9,2025-06-19 00:00:00
+PRD-00240,SKU-WPQY6870,Flores Collector's Edition Biography,Books,Flores,15.31,9.7,6.09,True,3.4,2023-12-28 00:00:00
+PRD-00241,SKU-POTT6287,Shaffer Illustrated Novel,Books,Shaffer,130.2,68.91,10.12,True,3.6,2023-01-09 00:00:00
+PRD-00242,SKU-HIYP8668,Harris-Lucas Illustrated Biography,Books,Harris-Lucas,64.6,27.74,4.42,True,3.1,2023-02-22 00:00:00
+PRD-00243,SKU-UMDR7518,Nunez-Morrison Bestselling Field Guide,Books,Nunez-Morrison,251.18,93.45,6.08,True,3.6,2024-09-30 00:00:00
+PRD-00244,SKU-NENV1398,Krueger-Smith Illustrated Cookbook,Books,Krueger-Smith,438.91,205.48,9.55,True,4.9,2025-02-12 00:00:00
+PRD-00245,SKU-SMTN3173,Herman-Arnold Bestselling Cookbook,Books,Herman-Arnold,273.1,128.47,0.53,False,4.4,2025-04-03 00:00:00
+PRD-00246,SKU-PWTQ4678,Hunt-Crawford Annotated Short Story Collection,Books,Hunt-Crawford,208.36,110.82,6.21,True,4.2,2023-06-16 00:00:00
+PRD-00247,SKU-XUAC1753,Shields Annotated Short Story Collection,Books,Shields,334.0,146.88,4.07,True,4.1,2024-12-26 00:00:00
+PRD-00248,SKU-SJMV8996,James and Sons Collector's Edition Biography,Books,James and Sons,368.01,169.47,8.1,True,4.2,2025-03-26 00:00:00
+PRD-00249,SKU-WFUP7854,Henry Illustrated Short Story Collection,Books,Henry,216.19,138.39,9.41,True,4.2,2025-01-08 00:00:00
+PRD-00250,SKU-LIPD2287,Johnson Illustrated Short Story Collection,Books,Johnson,218.8,110.99,8.67,True,3.8,2025-04-21 00:00:00
+PRD-00251,SKU-OOET0062,Smith PLC Fair-Trade Coffee Beans,Grocery,Smith PLC,259.79,145.52,2.33,True,3.8,2024-02-27 00:00:00
+PRD-00252,SKU-OQNE7509,Freeman Fair-Trade Herbal Tea,Grocery,Freeman,228.31,121.79,5.69,True,4.5,2024-12-23 00:00:00
+PRD-00253,SKU-ISBG0084,Craig Fair-Trade Granola,Grocery,Craig,97.27,43.53,7.96,True,3.6,2023-06-27 00:00:00
+PRD-00254,SKU-PMNH1182,Ochoa-Adams Single-Origin Granola,Grocery,Ochoa-Adams,157.34,71.79,9.28,True,4.3,2024-12-10 00:00:00
+PRD-00255,SKU-DKPS6156,Evans Gluten-Free Granola,Grocery,Evans,220.46,140.48,3.38,True,4.9,2023-11-01 00:00:00
+PRD-00256,SKU-YJED0166,Smith Gluten-Free Honey,Grocery,Smith,97.24,54.6,3.84,True,4.9,2025-03-25 00:00:00
+PRD-00257,SKU-HCON6591,Clay Gluten-Free Trail Mix,Grocery,Clay,59.23,32.75,4.59,True,4.6,2025-03-02 00:00:00
+PRD-00258,SKU-QCLU1489,Ali PLC Fair-Trade Trail Mix,Grocery,Ali PLC,23.72,15.1,0.99,True,4.3,2025-02-04 00:00:00
+PRD-00259,SKU-KKPK2614,Rhodes-Fernandez Single-Origin Olive Oil,Grocery,Rhodes-Fernandez,94.92,48.56,11.2,True,3.3,2024-09-22 00:00:00
+PRD-00260,SKU-VWDG6218,Hall-Jones Small-Batch Olive Oil,Grocery,Hall-Jones,112.89,62.2,6.4,True,3.1,2024-02-28 00:00:00
+PRD-00261,SKU-XUBO9996,Bowers-Hayes Gluten-Free Honey,Grocery,Bowers-Hayes,215.22,119.31,1.69,True,5.0,2023-06-11 00:00:00
+PRD-00262,SKU-BLRL3586,James Single-Origin Honey,Grocery,James,421.09,258.35,5.76,True,4.9,2023-11-25 00:00:00
+PRD-00263,SKU-JYTY3114,Moore Gluten-Free Honey,Grocery,Moore,31.33,18.19,7.84,True,4.5,2025-05-20 00:00:00
+PRD-00264,SKU-XWRG1047,Miller Organic Olive Oil,Grocery,Miller,190.96,114.82,11.21,False,4.7,2025-03-17 00:00:00
+PRD-00265,SKU-AGBF7888,Spencer-Carlson Single-Origin Olive Oil,Grocery,Spencer-Carlson,421.79,269.37,11.12,True,3.0,2024-08-04 00:00:00
+PRD-00266,SKU-AYXF5604,Santana Small-Batch Coffee Beans,Grocery,Santana,418.16,188.39,5.48,True,4.0,2023-05-18 00:00:00
+PRD-00267,SKU-KIRT9826,Snyder-Brown Small-Batch Herbal Tea,Grocery,Snyder-Brown,126.41,74.92,4.0,True,4.3,2025-01-05 00:00:00
+PRD-00268,SKU-EYEX6464,Raymond-Le Fair-Trade Coffee Beans,Grocery,Raymond-Le,332.79,195.42,6.83,True,3.4,2025-05-26 00:00:00
+PRD-00269,SKU-DGIT7993,Rush Single-Origin Herbal Tea,Grocery,Rush,234.3,88.1,8.05,True,3.3,2023-11-28 00:00:00
+PRD-00270,SKU-VBPM9657,Evans PLC Fair-Trade Coffee Beans,Grocery,Evans PLC,121.05,50.92,9.06,True,3.6,2025-01-10 00:00:00
+PRD-00271,SKU-ZUSV3752,Chen Small-Batch Coffee Beans,Grocery,Chen,121.39,55.58,2.87,True,3.9,2023-06-13 00:00:00
+PRD-00272,SKU-XHKM5646,Osborn Single-Origin Honey,Grocery,Osborn,228.62,141.41,8.46,True,3.2,2023-10-30 00:00:00
+PRD-00273,SKU-ZSSE0737,Chambers-Taylor Gluten-Free Granola,Grocery,Chambers-Taylor,103.28,65.81,5.76,True,5.0,2024-01-18 00:00:00
+PRD-00274,SKU-TBYY4342,Cole PLC Single-Origin Honey,Grocery,Cole PLC,249.41,122.52,6.47,True,3.4,2023-09-11 00:00:00
+PRD-00275,SKU-GSAI7968,Gibbs Small-Batch Coffee Beans,Grocery,Gibbs,238.85,121.44,4.37,True,3.2,2025-04-28 00:00:00
+PRD-00276,SKU-XPQQ8911,Jackson-Salazar Small-Batch Granola,Grocery,Jackson-Salazar,94.96,48.52,2.02,True,3.9,2024-11-27 00:00:00
+PRD-00277,SKU-GAGQ9656,Dixon PLC Fair-Trade Honey,Grocery,Dixon PLC,264.5,99.79,6.15,True,3.9,2024-06-09 00:00:00
+PRD-00278,SKU-CXZD8993,Chapman Single-Origin Herbal Tea,Grocery,Chapman,255.94,132.48,8.09,True,3.0,2023-09-18 00:00:00
+PRD-00279,SKU-AFHU0714,Bailey Organic Honey,Grocery,Bailey,101.97,37.92,5.11,True,4.1,2023-03-03 00:00:00
+PRD-00280,SKU-WEGC7387,Horton Organic Herbal Tea,Grocery,Horton,19.12,9.04,9.24,True,5.0,2024-10-23 00:00:00
+PRD-00281,SKU-RZKV1051,Black PLC Single-Origin Trail Mix,Grocery,Black PLC,446.82,207.66,10.44,True,3.8,2024-11-30 00:00:00
+PRD-00282,SKU-DOZZ2586,Lopez Small-Batch Olive Oil,Grocery,Lopez,295.82,134.4,2.18,True,4.1,2025-01-15 00:00:00
+PRD-00283,SKU-LBYA0937,Lewis Fair-Trade Coffee Beans,Grocery,Lewis,341.5,219.77,5.58,True,3.8,2024-01-24 00:00:00
+PRD-00284,SKU-LXUM1918,Wilson-Lambert Fair-Trade Olive Oil,Grocery,Wilson-Lambert,209.98,83.26,2.3,True,4.5,2023-02-02 00:00:00
+PRD-00285,SKU-YNZL7859,Bailey Single-Origin Granola,Grocery,Bailey,345.89,212.77,0.24,True,3.2,2023-02-04 00:00:00
+PRD-00286,SKU-LFRI9249,Wilson-Torres Single-Origin Granola,Grocery,Wilson-Torres,304.05,185.98,2.97,False,3.9,2024-07-06 00:00:00
+PRD-00287,SKU-YAMI2528,Reyes Fair-Trade Coffee Beans,Grocery,Reyes,67.36,43.65,2.85,True,4.2,2024-08-14 00:00:00
+PRD-00288,SKU-SILU2827,Harvey-Glenn Small-Batch Honey,Grocery,Harvey-Glenn,369.18,155.45,10.52,True,4.0,2024-02-28 00:00:00
+PRD-00289,SKU-YJGP0723,Ortiz-Vasquez Gluten-Free Trail Mix,Grocery,Ortiz-Vasquez,32.13,20.39,10.56,True,4.3,2024-03-13 00:00:00
+PRD-00290,SKU-KBYW7721,Carter Small-Batch Herbal Tea,Grocery,Carter,25.86,11.72,7.74,True,4.0,2024-12-14 00:00:00
+PRD-00291,SKU-XDKV3842,Dunn-Wilson Single-Origin Herbal Tea,Grocery,Dunn-Wilson,71.4,33.05,9.07,True,4.7,2023-11-04 00:00:00
+PRD-00292,SKU-IWCW1485,Alexander Fair-Trade Herbal Tea,Grocery,Alexander,412.06,213.74,11.62,True,3.3,2023-09-06 00:00:00
+PRD-00293,SKU-QWFC3407,Rowe and Sons Gluten-Free Olive Oil,Grocery,Rowe and Sons,151.97,56.79,5.42,True,4.1,2025-04-29 00:00:00
+PRD-00294,SKU-OBKN3959,Glover and Sons Fair-Trade Coffee Beans,Grocery,Glover and Sons,124.47,68.72,7.25,True,3.4,2025-02-18 00:00:00
+PRD-00295,SKU-RMIK0958,Werner-Carter Small-Batch Honey,Grocery,Werner-Carter,303.8,126.11,2.55,True,3.6,2023-01-16 00:00:00
+PRD-00296,SKU-IWYA9481,Riddle Ltd Fair-Trade Olive Oil,Grocery,Riddle Ltd,433.12,166.84,11.99,True,3.5,2024-09-10 00:00:00
+PRD-00297,SKU-TUPW2232,Long Fair-Trade Herbal Tea,Grocery,Long,412.23,212.56,9.32,True,4.1,2024-01-03 00:00:00
+PRD-00298,SKU-OYXF6671,Robertson-Ramirez Gluten-Free Trail Mix,Grocery,Robertson-Ramirez,165.04,101.47,5.62,True,4.4,2025-02-18 00:00:00
+PRD-00299,SKU-LAXU5775,Simon Gluten-Free Olive Oil,Grocery,Simon,169.96,80.59,6.77,True,3.3,2023-09-25 00:00:00
+PRD-00300,SKU-NBNF5186,Morris-Campbell Small-Batch Granola,Grocery,Morris-Campbell,262.72,124.86,1.87,True,3.8,2025-05-03 00:00:00
+PRD-00301,SKU-FYVR8929,Williams Ltd Fragrance-Free Body Lotion,Beauty,Williams Ltd,250.04,158.29,4.08,True,4.0,2025-01-10 00:00:00
+PRD-00302,SKU-CDAB7012,Forbes and Sons Mineral Body Lotion,Beauty,Forbes and Sons,79.86,47.0,2.07,True,4.0,2024-07-09 00:00:00
+PRD-00303,SKU-PXQF4241,Beck-Banks Hydrating Sunscreen,Beauty,Beck-Banks,20.05,12.11,11.34,True,4.5,2024-02-27 00:00:00
+PRD-00304,SKU-BPFT0643,Smith Fragrance-Free Face Mask,Beauty,Smith,107.99,60.71,0.16,True,3.7,2024-09-24 00:00:00
+PRD-00305,SKU-HRCA1293,Dominguez Overnight Body Lotion,Beauty,Dominguez,298.38,105.84,6.41,True,3.0,2025-01-09 00:00:00
+PRD-00306,SKU-OYFU6271,Garcia Vegan Sunscreen,Beauty,Garcia,439.98,156.26,9.77,True,4.6,2023-07-03 00:00:00
+PRD-00307,SKU-PRJE4262,Elliott Hydrating Face Serum,Beauty,Elliott,238.35,100.65,7.46,True,3.7,2025-03-25 00:00:00
+PRD-00308,SKU-NRCN5326,Mosley and Sons Mineral Face Serum,Beauty,Mosley and Sons,171.01,80.68,6.8,True,3.5,2024-12-01 00:00:00
+PRD-00309,SKU-BUYI1965,Hill Hydrating Face Mask,Beauty,Hill,446.3,243.22,0.43,True,3.8,2024-05-02 00:00:00
+PRD-00310,SKU-UMSX3899,Johnson Hydrating Face Mask,Beauty,Johnson,9.21,3.7,6.02,True,4.6,2024-08-02 00:00:00
+PRD-00311,SKU-MVZS3898,Brown Hydrating Sunscreen,Beauty,Brown,414.02,173.45,10.82,True,4.1,2023-10-05 00:00:00
+PRD-00312,SKU-FOME7613,Oneal Hydrating Face Serum,Beauty,Oneal,309.57,134.39,6.54,True,3.4,2025-05-20 00:00:00
+PRD-00313,SKU-AXIR5269,Farmer Vegan Face Serum,Beauty,Farmer,432.85,227.73,9.04,True,3.8,2023-03-20 00:00:00
+PRD-00314,SKU-QNCD0910,Hunter-Fuller Vegan Shampoo,Beauty,Hunter-Fuller,255.96,133.1,10.2,True,4.1,2024-01-29 00:00:00
+PRD-00315,SKU-FOII8666,Hernandez Fragrance-Free Face Mask,Beauty,Hernandez,327.25,163.7,11.69,False,3.9,2025-05-08 00:00:00
+PRD-00316,SKU-ZLOW3285,Becker Hydrating Lip Balm,Beauty,Becker,274.3,146.52,7.17,True,3.7,2024-10-11 00:00:00
+PRD-00317,SKU-BHDN3031,Brown Vegan Body Lotion,Beauty,Brown,223.32,102.0,11.3,True,4.4,2024-11-07 00:00:00
+PRD-00318,SKU-SAKF2102,Mills-Logan Mineral Face Serum,Beauty,Mills-Logan,348.61,152.91,3.0,False,3.5,2024-01-25 00:00:00
+PRD-00319,SKU-VXRU4252,Wise Fragrance-Free Face Mask,Beauty,Wise,178.38,81.74,1.14,True,3.9,2025-02-18 00:00:00
+PRD-00320,SKU-EQTK5648,Jones Vegan Face Serum,Beauty,Jones,63.97,25.99,5.41,True,3.8,2023-01-27 00:00:00
+PRD-00321,SKU-KQXG7925,Craig Hydrating Lip Balm,Beauty,Craig,251.63,133.13,9.42,True,3.0,2024-02-28 00:00:00
+PRD-00322,SKU-CEXY0003,White Mineral Face Serum,Beauty,White,327.56,169.63,11.91,True,4.0,2024-12-02 00:00:00
+PRD-00323,SKU-PAUU8635,Mckenzie-Duncan Mineral Shampoo,Beauty,Mckenzie-Duncan,66.78,29.41,5.94,False,3.9,2024-03-07 00:00:00
+PRD-00324,SKU-OZHC1802,Jones-Marshall Vegan Body Lotion,Beauty,Jones-Marshall,353.29,161.93,11.33,True,4.0,2024-09-23 00:00:00
+PRD-00325,SKU-JDAX4451,Carter Fragrance-Free Body Lotion,Beauty,Carter,52.6,23.22,11.39,True,4.2,2025-04-03 00:00:00
+PRD-00326,SKU-LFXX9375,Oconnor PLC Vegan Body Lotion,Beauty,Oconnor PLC,153.96,91.55,10.32,True,3.3,2023-11-25 00:00:00
+PRD-00327,SKU-BOIW3206,Franco Overnight Face Mask,Beauty,Franco,94.38,41.93,11.58,True,3.6,2024-12-12 00:00:00
+PRD-00328,SKU-NHPA0641,Woodward-Kaufman Mineral Sunscreen,Beauty,Woodward-Kaufman,352.98,158.05,3.4,True,3.7,2024-07-31 00:00:00
+PRD-00329,SKU-OHAS2410,Ellis-Adkins Fragrance-Free Sunscreen,Beauty,Ellis-Adkins,448.78,181.3,9.22,False,4.5,2024-12-26 00:00:00
+PRD-00330,SKU-OZEL9182,Brown Fragrance-Free Body Lotion,Beauty,Brown,359.97,215.76,0.88,True,4.6,2024-11-20 00:00:00
+PRD-00331,SKU-SVUU4456,Nelson-Jones Mineral Shampoo,Beauty,Nelson-Jones,286.83,121.22,7.92,True,4.6,2023-03-17 00:00:00
+PRD-00332,SKU-JGKC3291,Edwards-Martinez Mineral Sunscreen,Beauty,Edwards-Martinez,218.26,102.63,6.1,True,4.4,2024-07-10 00:00:00
+PRD-00333,SKU-DQHF5374,Aguirre Hydrating Lip Balm,Beauty,Aguirre,317.23,188.34,7.15,True,3.2,2023-09-12 00:00:00
+PRD-00334,SKU-JFTP9035,Foster-Williams Vegan Shampoo,Beauty,Foster-Williams,292.91,106.41,11.8,True,3.8,2025-02-09 00:00:00
+PRD-00335,SKU-ZCJV4420,Wright Vegan Body Lotion,Beauty,Wright,52.15,19.8,2.7,True,4.1,2024-12-05 00:00:00
+PRD-00336,SKU-XOIM2100,Watson-Mccoy Overnight Shampoo,Beauty,Watson-Mccoy,203.37,95.04,9.28,True,4.0,2023-12-20 00:00:00
+PRD-00337,SKU-EBEM1994,Ramos Hydrating Body Lotion,Beauty,Ramos,51.52,24.46,11.54,True,4.9,2023-05-26 00:00:00
+PRD-00338,SKU-DKKB5107,Foster Vegan Lip Balm,Beauty,Foster,157.66,92.28,6.28,True,3.2,2025-01-09 00:00:00
+PRD-00339,SKU-RRCJ2532,Mendez PLC Mineral Lip Balm,Beauty,Mendez PLC,34.89,12.68,8.54,False,3.7,2023-04-22 00:00:00
+PRD-00340,SKU-JEDF3476,Reyes-Barnes Fragrance-Free Face Mask,Beauty,Reyes-Barnes,113.54,45.68,1.96,True,4.9,2023-08-26 00:00:00
+PRD-00341,SKU-YYTW8380,Stephens-Washington Mineral Face Mask,Beauty,Stephens-Washington,87.08,47.21,5.21,False,4.2,2023-07-22 00:00:00
+PRD-00342,SKU-RLBU9856,Robinson Mineral Sunscreen,Beauty,Robinson,196.15,68.91,2.62,True,4.4,2025-03-26 00:00:00
+PRD-00343,SKU-XLOK0785,Wright and Sons Hydrating Sunscreen,Beauty,Wright and Sons,50.28,30.75,2.28,True,3.9,2023-09-26 00:00:00
+PRD-00344,SKU-KZYW4803,Thompson PLC Mineral Sunscreen,Beauty,Thompson PLC,434.83,193.07,4.69,True,3.2,2023-12-27 00:00:00
+PRD-00345,SKU-TSWK5590,Thomas Mineral Sunscreen,Beauty,Thomas,81.77,45.14,9.62,True,4.2,2024-11-19 00:00:00
+PRD-00346,SKU-FCFD7842,Guzman Fragrance-Free Lip Balm,Beauty,Guzman,57.45,25.37,2.24,True,4.0,2024-03-04 00:00:00
+PRD-00347,SKU-NMZI8705,Love-Sellers Overnight Shampoo,Beauty,Love-Sellers,260.79,124.37,5.87,True,4.8,2023-06-27 00:00:00
+PRD-00348,SKU-LTJX5002,Mathis Overnight Shampoo,Beauty,Mathis,222.89,87.39,3.81,True,3.1,2024-01-03 00:00:00
+PRD-00349,SKU-GVTU1569,Daugherty Ltd Hydrating Body Lotion,Beauty,Daugherty Ltd,65.76,39.1,11.57,True,4.0,2024-12-02 00:00:00
+PRD-00350,SKU-TJSN6752,Walker-Chapman Mineral Body Lotion,Beauty,Walker-Chapman,321.01,155.1,2.05,True,4.6,2023-08-14 00:00:00
+PRD-00351,SKU-ILUA2644,Fry Glow-in-the-Dark Puzzle,Toys,Fry,127.31,65.09,2.06,True,4.5,2025-02-23 00:00:00
+PRD-00352,SKU-UZNO9029,Cunningham Interactive Model Kit,Toys,Cunningham,232.31,121.22,3.25,True,5.0,2024-07-09 00:00:00
+PRD-00353,SKU-KOFT1355,Fowler Wooden Action Figure,Toys,Fowler,201.41,83.7,5.13,True,4.3,2023-09-11 00:00:00
+PRD-00354,SKU-WQYG4331,Smith Glow-in-the-Dark Puzzle,Toys,Smith,205.13,93.25,9.81,True,5.0,2025-03-05 00:00:00
+PRD-00355,SKU-WIYG2676,Kramer-Lane Educational Building Blocks,Toys,Kramer-Lane,365.76,192.53,4.24,True,4.3,2023-06-19 00:00:00
+PRD-00356,SKU-ZCSB3271,Green-Garcia Collectible Building Blocks,Toys,Green-Garcia,354.26,210.45,9.68,True,4.1,2024-09-03 00:00:00
+PRD-00357,SKU-UEJF5262,Wheeler-Austin Collectible Building Blocks,Toys,Wheeler-Austin,149.03,83.64,3.51,True,4.7,2024-11-26 00:00:00
+PRD-00358,SKU-MBKD7062,Rivera and Sons Wooden Building Blocks,Toys,Rivera and Sons,433.43,253.86,11.03,True,4.7,2023-05-10 00:00:00
+PRD-00359,SKU-QSTP6884,Williams PLC Educational Building Blocks,Toys,Williams PLC,70.08,31.3,3.01,True,3.8,2023-05-26 00:00:00
+PRD-00360,SKU-XABF8720,Colon-Weber Collectible Action Figure,Toys,Colon-Weber,124.58,59.08,5.45,True,4.8,2023-04-06 00:00:00
+PRD-00361,SKU-NKOS7310,Wells Interactive Model Kit,Toys,Wells,338.66,189.11,10.53,True,4.0,2024-08-18 00:00:00
+PRD-00362,SKU-QQFP4677,Hughes Wooden Action Figure,Toys,Hughes,46.45,29.8,7.64,True,4.7,2025-03-25 00:00:00
+PRD-00363,SKU-CDQO2704,Elliott-Hernandez Collectible Plush Toy,Toys,Elliott-Hernandez,101.93,48.81,2.58,True,4.7,2023-12-12 00:00:00
+PRD-00364,SKU-AWLO1158,Brown Collectible Model Kit,Toys,Brown,63.11,38.23,9.47,True,4.5,2023-02-17 00:00:00
+PRD-00365,SKU-ETFZ8793,Johnson Wooden Action Figure,Toys,Johnson,353.83,172.62,1.53,True,3.9,2023-01-01 00:00:00
+PRD-00366,SKU-WCLK9921,Stokes and Sons Interactive Building Blocks,Toys,Stokes and Sons,448.08,279.07,10.59,True,4.7,2025-06-16 00:00:00
+PRD-00367,SKU-MOJM0616,Flores-Acosta Glow-in-the-Dark Puzzle,Toys,Flores-Acosta,296.29,125.96,4.49,True,3.3,2024-02-10 00:00:00
+PRD-00368,SKU-ZJUR1168,Ellis Glow-in-the-Dark Action Figure,Toys,Ellis,316.25,132.9,7.88,True,3.0,2024-05-03 00:00:00
+PRD-00369,SKU-HAJJ9986,Matthews Wooden Building Blocks,Toys,Matthews,269.19,136.17,5.37,False,3.7,2023-05-04 00:00:00
+PRD-00370,SKU-IWAQ1914,Pena-Armstrong Interactive Action Figure,Toys,Pena-Armstrong,63.82,23.69,4.63,True,3.2,2023-11-17 00:00:00
+PRD-00371,SKU-ZJNM7024,Steele Glow-in-the-Dark Board Game,Toys,Steele,66.02,38.43,9.05,True,5.0,2023-05-27 00:00:00
+PRD-00372,SKU-RXBV5307,Collins-Cameron Wooden Model Kit,Toys,Collins-Cameron,255.66,136.29,2.01,True,3.4,2025-02-05 00:00:00
+PRD-00373,SKU-VCXU1324,Daniel-Jacobs Educational Plush Toy,Toys,Daniel-Jacobs,279.15,134.75,2.65,True,3.3,2023-05-07 00:00:00
+PRD-00374,SKU-AVFW1373,Camacho Collectible Action Figure,Toys,Camacho,175.89,112.39,3.81,True,3.6,2023-03-28 00:00:00
+PRD-00375,SKU-ZIXH2148,Johnson Educational Model Kit,Toys,Johnson,272.44,154.3,3.45,True,3.1,2025-05-17 00:00:00
+PRD-00376,SKU-DXTM0307,Richardson-Marshall Glow-in-the-Dark Building Blocks,Toys,Richardson-Marshall,235.4,118.37,8.99,True,3.1,2025-03-23 00:00:00
+PRD-00377,SKU-XFMC6103,Horne Educational Plush Toy,Toys,Horne,176.72,74.63,7.68,False,4.8,2023-01-13 00:00:00
+PRD-00378,SKU-KQVS9855,Mitchell Glow-in-the-Dark Board Game,Toys,Mitchell,63.73,38.76,6.84,True,4.4,2025-02-20 00:00:00
+PRD-00379,SKU-OPOR0293,Adams Interactive Puzzle,Toys,Adams,12.43,4.6,3.18,False,3.1,2025-03-19 00:00:00
+PRD-00380,SKU-IPLM8007,Walker PLC Interactive Model Kit,Toys,Walker PLC,132.49,74.7,9.22,True,3.8,2024-10-17 00:00:00
+PRD-00381,SKU-WDQN4466,Turner-Meyer Collectible Model Kit,Toys,Turner-Meyer,279.14,120.93,3.75,True,3.4,2025-04-07 00:00:00
+PRD-00382,SKU-AGQX9691,Holland Educational Model Kit,Toys,Holland,150.4,79.1,9.17,True,4.3,2023-11-14 00:00:00
+PRD-00383,SKU-ROUR1715,Douglas-Farley Interactive Action Figure,Toys,Douglas-Farley,429.28,180.98,2.97,True,3.2,2024-09-18 00:00:00
+PRD-00384,SKU-WPDZ4328,Powell Collectible Puzzle,Toys,Powell,142.63,81.66,8.9,True,4.4,2024-12-19 00:00:00
+PRD-00385,SKU-AZYV0744,Aguilar PLC Wooden Building Blocks,Toys,Aguilar PLC,225.9,102.56,6.23,True,3.5,2024-01-16 00:00:00
+PRD-00386,SKU-OYEQ3538,Romero-Bruce Educational Action Figure,Toys,Romero-Bruce,352.6,151.84,10.64,True,3.1,2025-04-06 00:00:00
+PRD-00387,SKU-EIVQ8241,Stokes Interactive Board Game,Toys,Stokes,238.12,102.13,11.7,True,4.0,2024-06-07 00:00:00
+PRD-00388,SKU-OVTA5135,Watson-Richards Glow-in-the-Dark Puzzle,Toys,Watson-Richards,227.33,118.23,4.44,True,3.2,2024-08-10 00:00:00
+PRD-00389,SKU-OLLN7170,Kennedy and Sons Wooden Building Blocks,Toys,Kennedy and Sons,334.65,117.39,10.31,False,3.1,2024-01-08 00:00:00
+PRD-00390,SKU-TADJ8168,Gay Interactive Building Blocks,Toys,Gay,84.64,54.01,0.47,True,4.4,2024-11-02 00:00:00
+PRD-00391,SKU-UTLX6972,Freeman Ltd Interactive Building Blocks,Toys,Freeman Ltd,148.2,70.38,8.66,True,3.2,2024-01-17 00:00:00
+PRD-00392,SKU-CRNW2500,Johnston and Sons Wooden Model Kit,Toys,Johnston and Sons,304.63,111.43,2.72,True,3.1,2024-02-15 00:00:00
+PRD-00393,SKU-BOBZ7129,Sanford-Reyes Wooden Plush Toy,Toys,Sanford-Reyes,390.38,227.22,3.76,True,3.9,2024-01-13 00:00:00
+PRD-00394,SKU-AUWH0835,Smith Educational Board Game,Toys,Smith,255.89,112.89,7.49,True,4.2,2024-05-20 00:00:00
+PRD-00395,SKU-IGYG3354,Torres Educational Action Figure,Toys,Torres,405.7,234.55,2.98,False,3.8,2023-08-27 00:00:00
+PRD-00396,SKU-HVBR4789,Cooper Collectible Board Game,Toys,Cooper,287.99,160.71,0.16,True,4.5,2024-01-21 00:00:00
+PRD-00397,SKU-BOOU5326,Clark Glow-in-the-Dark Puzzle,Toys,Clark,96.31,62.11,5.07,True,4.9,2023-05-26 00:00:00
+PRD-00398,SKU-XTPY9821,Brooks Ltd Glow-in-the-Dark Puzzle,Toys,Brooks Ltd,24.54,10.29,10.15,True,4.8,2024-04-14 00:00:00
+PRD-00399,SKU-MDQG4890,Huff Wooden Model Kit,Toys,Huff,47.53,18.54,9.85,False,4.1,2024-03-21 00:00:00
+PRD-00400,SKU-QESJ7618,Neal Ltd Educational Building Blocks,Toys,Neal Ltd,134.8,81.59,11.12,True,4.7,2023-12-01 00:00:00
+PRD-00401,SKU-QHRN0461,Haynes Adjustable Pen Set,Office Supplies,Haynes,126.02,46.93,2.47,True,4.2,2023-06-09 00:00:00
+PRD-00402,SKU-HYGF8914,Lynch Ergonomic Notebook,Office Supplies,Lynch,205.06,91.09,1.49,True,4.5,2024-04-07 00:00:00
+PRD-00403,SKU-SKCJ8356,Lozano-Watts Adjustable Pen Set,Office Supplies,Lozano-Watts,122.93,47.45,1.93,True,4.7,2024-12-14 00:00:00
+PRD-00404,SKU-AQFH7530,Caldwell Recycled Desk Lamp,Office Supplies,Caldwell,100.68,61.11,1.82,True,4.9,2024-02-10 00:00:00
+PRD-00405,SKU-PODS8114,Marshall-Garcia Recycled Desk Lamp,Office Supplies,Marshall-Garcia,306.35,131.13,11.89,False,3.8,2024-04-08 00:00:00
+PRD-00406,SKU-ZRUB2045,Wilson Recycled Label Maker,Office Supplies,Wilson,249.8,94.53,1.27,True,3.2,2023-03-05 00:00:00
+PRD-00407,SKU-WCNR0225,Davis Refillable Notebook,Office Supplies,Davis,93.17,43.81,8.25,True,3.2,2024-08-23 00:00:00
+PRD-00408,SKU-YSEZ6674,Banks-Robles Adjustable Desk Lamp,Office Supplies,Banks-Robles,14.7,5.43,10.83,True,3.3,2025-05-17 00:00:00
+PRD-00409,SKU-GALE1202,Gregory Adjustable Desk Lamp,Office Supplies,Gregory,24.0,11.72,2.06,True,4.6,2024-02-09 00:00:00
+PRD-00410,SKU-EFHA5902,Williams-Green Wireless Desk Lamp,Office Supplies,Williams-Green,175.31,83.8,4.28,True,3.5,2024-04-01 00:00:00
+PRD-00411,SKU-UKOQ5089,Stone-Watts Refillable Desk Lamp,Office Supplies,Stone-Watts,278.28,148.91,7.78,True,4.8,2024-05-05 00:00:00
+PRD-00412,SKU-EWQR9163,Cruz Ergonomic Desk Lamp,Office Supplies,Cruz,129.5,50.66,2.43,True,4.1,2024-10-07 00:00:00
+PRD-00413,SKU-GEFK9002,Walton Recycled Desk Lamp,Office Supplies,Walton,445.28,260.3,4.34,True,4.0,2024-08-02 00:00:00
+PRD-00414,SKU-GOJP3540,Powell-Young Recycled Standing Desk Mat,Office Supplies,Powell-Young,177.83,71.83,3.86,True,4.8,2025-03-08 00:00:00
+PRD-00415,SKU-FFCU7797,Hooper Ltd Adjustable Desk Lamp,Office Supplies,Hooper Ltd,364.85,179.33,4.32,True,3.5,2023-06-13 00:00:00
+PRD-00416,SKU-CJJA0166,Conner PLC Ergonomic Notebook,Office Supplies,Conner PLC,297.3,127.83,9.8,True,3.1,2023-08-13 00:00:00
+PRD-00417,SKU-PQDV4883,Bryan-Velasquez Recycled Pen Set,Office Supplies,Bryan-Velasquez,162.89,98.02,10.15,True,4.2,2025-04-05 00:00:00
+PRD-00418,SKU-METQ7589,Baldwin-Wilson Adjustable Monitor Arm,Office Supplies,Baldwin-Wilson,17.55,9.83,11.37,True,4.1,2023-07-12 00:00:00
+PRD-00419,SKU-OZSJ3055,Brooks Wireless Monitor Arm,Office Supplies,Brooks,142.53,70.86,1.13,True,3.4,2024-06-23 00:00:00
+PRD-00420,SKU-QNMM7261,Conrad Wireless Desk Lamp,Office Supplies,Conrad,152.62,81.54,9.69,True,3.4,2025-04-01 00:00:00
+PRD-00421,SKU-GWAC3735,Monroe Adjustable Desk Lamp,Office Supplies,Monroe,14.75,7.76,11.01,True,4.7,2025-05-31 00:00:00
+PRD-00422,SKU-IFAH7798,Williams Adjustable Desk Lamp,Office Supplies,Williams,171.25,108.33,4.78,True,3.6,2023-05-20 00:00:00
+PRD-00423,SKU-LUIG7829,Sandoval-Obrien Refillable Label Maker,Office Supplies,Sandoval-Obrien,427.17,250.98,11.53,True,3.3,2024-07-29 00:00:00
+PRD-00424,SKU-MSWP5866,Sanders-Cooper Recycled Standing Desk Mat,Office Supplies,Sanders-Cooper,104.34,54.95,2.15,True,4.4,2023-05-11 00:00:00
+PRD-00425,SKU-AMSV4722,Evans Refillable Label Maker,Office Supplies,Evans,5.8,3.25,6.9,True,4.5,2024-08-04 00:00:00
+PRD-00426,SKU-NTSR8333,Morse-Anderson Ergonomic Notebook,Office Supplies,Morse-Anderson,273.06,171.02,11.61,True,4.1,2024-05-23 00:00:00
+PRD-00427,SKU-THWW2885,Castillo Refillable Standing Desk Mat,Office Supplies,Castillo,336.68,141.88,11.79,True,4.8,2023-04-01 00:00:00
+PRD-00428,SKU-ZAHG6846,James Adjustable Pen Set,Office Supplies,James,10.07,4.16,8.33,True,4.6,2025-01-07 00:00:00
+PRD-00429,SKU-SRQJ0342,Vaughn Ergonomic Desk Lamp,Office Supplies,Vaughn,176.74,100.7,11.63,True,4.0,2024-01-23 00:00:00
+PRD-00430,SKU-CGNR3805,Hoffman Adjustable Monitor Arm,Office Supplies,Hoffman,172.03,102.98,9.48,True,4.5,2023-08-19 00:00:00
+PRD-00431,SKU-SQDY6384,Butler-French Refillable Pen Set,Office Supplies,Butler-French,37.8,22.82,3.57,True,4.9,2023-03-17 00:00:00
+PRD-00432,SKU-VQMN5800,Greer-Pruitt Adjustable Notebook,Office Supplies,Greer-Pruitt,400.13,159.36,0.95,True,5.0,2023-12-13 00:00:00
+PRD-00433,SKU-MXUM5989,Cole-Lucero Recycled Monitor Arm,Office Supplies,Cole-Lucero,402.49,225.94,5.2,True,4.2,2024-03-20 00:00:00
+PRD-00434,SKU-HYCB1228,Hawkins-Anderson Refillable Desk Lamp,Office Supplies,Hawkins-Anderson,50.06,20.61,2.32,True,4.4,2025-01-17 00:00:00
+PRD-00435,SKU-DTJC9405,Mcfarland PLC Recycled Standing Desk Mat,Office Supplies,Mcfarland PLC,298.97,131.31,1.2,True,4.1,2024-05-17 00:00:00
+PRD-00436,SKU-YKJW0947,Bowers Refillable Desk Lamp,Office Supplies,Bowers,165.57,79.19,3.57,True,4.2,2023-07-24 00:00:00
+PRD-00437,SKU-EYGK8328,Daniels-Powell Ergonomic Desk Lamp,Office Supplies,Daniels-Powell,97.09,52.57,11.73,True,3.2,2025-03-14 00:00:00
+PRD-00438,SKU-VXSN5335,Moreno Wireless Pen Set,Office Supplies,Moreno,222.65,122.08,1.14,True,3.4,2024-01-26 00:00:00
+PRD-00439,SKU-PPNN0157,Haley Ltd Adjustable Notebook,Office Supplies,Haley Ltd,203.37,87.24,5.61,True,3.5,2023-03-05 00:00:00
+PRD-00440,SKU-QIUS5616,Pruitt Refillable Label Maker,Office Supplies,Pruitt,302.02,113.47,4.16,True,4.9,2024-08-26 00:00:00
+PRD-00441,SKU-CSPM8877,Palmer-Vaughan Refillable Monitor Arm,Office Supplies,Palmer-Vaughan,32.14,14.98,6.29,True,4.4,2024-05-01 00:00:00
+PRD-00442,SKU-OENQ2880,Ayala Recycled Notebook,Office Supplies,Ayala,216.94,81.07,10.84,True,4.0,2024-06-13 00:00:00
+PRD-00443,SKU-PEVR1386,Johnson Ltd Recycled Label Maker,Office Supplies,Johnson Ltd,442.33,174.38,11.39,True,4.9,2023-06-21 00:00:00
+PRD-00444,SKU-DLYQ5011,Jones Refillable Notebook,Office Supplies,Jones,61.15,29.17,11.86,True,5.0,2024-10-04 00:00:00
+PRD-00445,SKU-BUBY6676,Wilson Refillable Monitor Arm,Office Supplies,Wilson,119.76,74.64,10.97,False,3.8,2024-02-11 00:00:00
+PRD-00446,SKU-WGGS1901,Turner Recycled Standing Desk Mat,Office Supplies,Turner,386.2,195.38,11.01,False,4.4,2024-08-24 00:00:00
+PRD-00447,SKU-EKIO7660,Francis PLC Recycled Pen Set,Office Supplies,Francis PLC,55.07,21.75,6.82,True,4.9,2023-04-13 00:00:00
+PRD-00448,SKU-AJJJ4245,Williams PLC Ergonomic Monitor Arm,Office Supplies,Williams PLC,351.9,206.12,10.42,True,4.8,2023-09-28 00:00:00
+PRD-00449,SKU-FTNV9688,Berger Wireless Label Maker,Office Supplies,Berger,221.09,117.77,0.5,True,3.3,2024-09-15 00:00:00
+PRD-00450,SKU-ONQM8222,White PLC Wireless Desk Lamp,Office Supplies,White PLC,181.13,111.16,8.3,False,4.0,2023-10-03 00:00:00
+PRD-00451,SKU-ESQE0878,Garcia-Swanson Interactive Dog Bed,Pet Supplies,Garcia-Swanson,155.35,91.36,3.77,True,4.7,2024-12-02 00:00:00
+PRD-00452,SKU-QPPG7552,Harvey-Mccullough Durable Cat Tree,Pet Supplies,Harvey-Mccullough,64.8,41.62,5.35,True,3.5,2024-03-02 00:00:00
+PRD-00453,SKU-NQTS5775,Hernandez Washable Leash,Pet Supplies,Hernandez,44.73,21.58,10.97,True,4.0,2024-06-12 00:00:00
+PRD-00454,SKU-PYOT6205,Davidson Interactive Dog Bed,Pet Supplies,Davidson,234.3,93.18,3.77,True,3.3,2025-05-21 00:00:00
+PRD-00455,SKU-WXTF5777,Rodriguez Washable Feeding Bowl,Pet Supplies,Rodriguez,17.88,7.29,10.0,True,3.5,2024-04-12 00:00:00
+PRD-00456,SKU-QUOE4283,Jones Durable Chew Toy,Pet Supplies,Jones,318.56,137.68,9.89,True,4.3,2023-05-07 00:00:00
+PRD-00457,SKU-XLNC0996,Green Durable Cat Tree,Pet Supplies,Green,170.75,90.19,2.17,True,4.2,2023-12-25 00:00:00
+PRD-00458,SKU-XLUS2563,Marshall PLC Interactive Cat Tree,Pet Supplies,Marshall PLC,377.76,161.53,9.98,True,3.1,2023-02-20 00:00:00
+PRD-00459,SKU-AQPZ1658,Sutton Orthopedic Feeding Bowl,Pet Supplies,Sutton,352.02,145.84,2.7,True,3.4,2024-10-29 00:00:00
+PRD-00460,SKU-QJVU2299,Crosby-Williams Grain-Free Feeding Bowl,Pet Supplies,Crosby-Williams,13.92,8.13,9.22,False,4.8,2024-10-24 00:00:00
+PRD-00461,SKU-XOCQ7314,Holmes Orthopedic Feeding Bowl,Pet Supplies,Holmes,361.38,150.74,7.32,True,4.4,2024-12-27 00:00:00
+PRD-00462,SKU-CPUG6770,Schmitt Interactive Pet Carrier,Pet Supplies,Schmitt,403.49,244.3,5.54,True,3.6,2024-06-17 00:00:00
+PRD-00463,SKU-LYPY4989,Matthews-Villanueva Washable Pet Carrier,Pet Supplies,Matthews-Villanueva,265.1,93.37,11.99,True,4.7,2024-07-28 00:00:00
+PRD-00464,SKU-OHZW1846,Tucker-Olson Washable Feeding Bowl,Pet Supplies,Tucker-Olson,130.79,72.63,5.81,True,3.6,2023-11-29 00:00:00
+PRD-00465,SKU-CKOE9082,Schneider Interactive Chew Toy,Pet Supplies,Schneider,296.97,188.77,7.84,True,4.0,2023-09-04 00:00:00
+PRD-00466,SKU-AZVU5913,Olson Durable Feeding Bowl,Pet Supplies,Olson,184.82,82.41,1.72,False,4.0,2023-10-30 00:00:00
+PRD-00467,SKU-PABP7392,Anderson PLC Interactive Pet Carrier,Pet Supplies,Anderson PLC,185.05,105.67,7.02,True,4.6,2023-12-18 00:00:00
+PRD-00468,SKU-KJDK2280,Nielsen-Black Orthopedic Leash,Pet Supplies,Nielsen-Black,242.91,142.22,10.88,True,4.0,2025-05-15 00:00:00
+PRD-00469,SKU-UUQS6990,Robinson PLC Orthopedic Leash,Pet Supplies,Robinson PLC,395.04,159.73,1.22,True,3.5,2025-04-07 00:00:00
+PRD-00470,SKU-AMJY7723,Hoover Washable Cat Tree,Pet Supplies,Hoover,426.38,264.3,7.87,True,3.4,2025-06-11 00:00:00
+PRD-00471,SKU-MLEO4257,Cruz-Rodriguez Interactive Pet Carrier,Pet Supplies,Cruz-Rodriguez,355.7,159.85,3.16,True,4.7,2024-04-26 00:00:00
+PRD-00472,SKU-JMGL3886,Valenzuela-Greene Durable Leash,Pet Supplies,Valenzuela-Greene,264.69,167.63,0.9,True,4.0,2025-06-07 00:00:00
+PRD-00473,SKU-EQIM8811,Carey Grain-Free Feeding Bowl,Pet Supplies,Carey,137.77,50.45,10.26,True,3.4,2024-02-24 00:00:00
+PRD-00474,SKU-CSHB6865,Mays Washable Pet Carrier,Pet Supplies,Mays,68.73,41.84,2.21,True,3.7,2023-07-01 00:00:00
+PRD-00475,SKU-GBIQ6599,Cannon-Kent Interactive Leash,Pet Supplies,Cannon-Kent,30.82,14.97,2.55,True,4.2,2023-06-12 00:00:00
+PRD-00476,SKU-AQMA1498,Manning Grain-Free Dog Bed,Pet Supplies,Manning,62.59,30.05,5.18,True,4.0,2023-01-05 00:00:00
+PRD-00477,SKU-SZUA8063,Rodriguez-Simmons Durable Feeding Bowl,Pet Supplies,Rodriguez-Simmons,93.74,43.3,0.22,True,4.7,2023-07-15 00:00:00
+PRD-00478,SKU-BKXN9448,Braun-Sanders Durable Leash,Pet Supplies,Braun-Sanders,6.84,3.9,2.75,True,3.6,2023-04-16 00:00:00
+PRD-00479,SKU-ELXJ3688,Webb Grain-Free Feeding Bowl,Pet Supplies,Webb,266.96,106.81,9.89,True,3.6,2025-01-15 00:00:00
+PRD-00480,SKU-CYSK6213,Lewis Washable Feeding Bowl,Pet Supplies,Lewis,238.23,114.37,8.26,True,5.0,2024-05-16 00:00:00
+PRD-00481,SKU-KYOA5890,Morrow Interactive Cat Tree,Pet Supplies,Morrow,78.37,48.75,9.75,False,3.4,2023-05-15 00:00:00
+PRD-00482,SKU-QOXF9611,Johnson Orthopedic Leash,Pet Supplies,Johnson,14.75,7.4,1.52,True,4.6,2024-01-20 00:00:00
+PRD-00483,SKU-DXLO9849,Gonzales-Harris Interactive Feeding Bowl,Pet Supplies,Gonzales-Harris,282.29,149.1,0.62,True,4.7,2023-02-19 00:00:00
+PRD-00484,SKU-YMGH8430,Hall Durable Pet Carrier,Pet Supplies,Hall,202.72,78.47,3.07,True,3.4,2024-12-03 00:00:00
+PRD-00485,SKU-RXZW3021,Foster Durable Chew Toy,Pet Supplies,Foster,192.29,73.13,6.27,True,4.4,2024-03-04 00:00:00
+PRD-00486,SKU-UJLW1184,Richmond-Hill Durable Feeding Bowl,Pet Supplies,Richmond-Hill,324.85,125.17,1.41,True,3.4,2023-07-24 00:00:00
+PRD-00487,SKU-KAQL9376,Hunter-Hansen Interactive Feeding Bowl,Pet Supplies,Hunter-Hansen,438.04,200.35,4.95,True,4.1,2023-08-01 00:00:00
+PRD-00488,SKU-ZGQI8451,Wright Grain-Free Chew Toy,Pet Supplies,Wright,109.35,38.69,1.11,True,4.1,2024-05-20 00:00:00
+PRD-00489,SKU-RDLB7357,Wilson-Jones Orthopedic Dog Bed,Pet Supplies,Wilson-Jones,351.89,131.08,8.7,True,4.3,2024-04-12 00:00:00
+PRD-00490,SKU-WHIA3356,Collier Interactive Chew Toy,Pet Supplies,Collier,211.6,80.4,2.14,False,3.6,2025-03-31 00:00:00
+PRD-00491,SKU-EUWN5182,Adams Interactive Pet Carrier,Pet Supplies,Adams,333.65,126.29,9.11,False,4.7,2024-11-10 00:00:00
+PRD-00492,SKU-VPQN3733,Harris and Sons Orthopedic Chew Toy,Pet Supplies,Harris and Sons,164.1,78.98,7.48,True,3.2,2025-04-14 00:00:00
+PRD-00493,SKU-HFRQ9521,Austin-Duran Interactive Cat Tree,Pet Supplies,Austin-Duran,55.66,26.16,5.51,True,4.4,2024-05-04 00:00:00
+PRD-00494,SKU-NUFK8075,Henry-Joyce Grain-Free Leash,Pet Supplies,Henry-Joyce,399.33,159.75,1.63,True,5.0,2025-05-14 00:00:00
+PRD-00495,SKU-WKID8463,Lloyd Orthopedic Dog Bed,Pet Supplies,Lloyd,190.13,100.24,9.64,True,3.4,2024-01-24 00:00:00
+PRD-00496,SKU-DHSH8562,Stewart-Smith Interactive Feeding Bowl,Pet Supplies,Stewart-Smith,17.82,9.9,10.07,True,3.3,2024-05-14 00:00:00
+PRD-00497,SKU-UXNQ3691,Dunn and Sons Durable Pet Carrier,Pet Supplies,Dunn and Sons,201.11,74.21,7.88,False,4.7,2024-06-21 00:00:00
+PRD-00498,SKU-XLFB4795,Barnes Washable Leash,Pet Supplies,Barnes,256.43,164.98,8.05,True,4.0,2024-12-18 00:00:00
+PRD-00499,SKU-LKIK5647,Perez Washable Dog Bed,Pet Supplies,Perez,197.62,112.25,5.81,True,4.3,2023-06-02 00:00:00
+PRD-00500,SKU-MJZV3866,Kennedy Washable Feeding Bowl,Pet Supplies,Kennedy,29.28,15.9,1.93,True,4.7,2025-06-09 00:00:00

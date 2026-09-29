@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Streaming Lakehouse Lab</title>
+<script>
+  // Before the stylesheet, so a saved theme applies on first paint.
+  try {
+    const t = localStorage.getItem("home.theme");
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  } catch {}
+</script>
+<style>
+  /* Same tokens as the Flink SQL editor (sql-editor/static/index.html), so the two pages
+     read as one environment. */
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --fg: #1d2330; --muted: #667085; --border: #d9dde4;
+    --accent: #e6526f; --accent-fg: #fff; --err: #b42335; --ok: #1f7a4d; --tint: #eef0f6;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --panel: #1b1f27; --fg: #e3e6ec; --muted: #9098a8; --border: #2e3440;
+      --accent: #f06a84; --accent-fg: #fff; --err: #ff8a9b; --ok: #5fd39b; --tint: #232834;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b; --panel: #1b1f27; --fg: #e3e6ec; --muted: #9098a8; --border: #2e3440;
+    --accent: #f06a84; --accent-fg: #fff; --err: #ff8a9b; --ok: #5fd39b; --tint: #232834;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 24px;
+           border-bottom: 1px solid var(--border); background: var(--panel); }
+  header h1 { font-size: 16px; margin: 0; }
+  header .spacer { flex: 1; }
+  #theme { width: 32px; height: 32px; padding: 0; font-size: 16px; line-height: 1; cursor: pointer;
+           border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--fg); }
+  main { max-width: 1120px; margin: 0 auto; padding: 32px 24px 48px; }
+
+  .intro h2 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .intro p { margin: 0; color: var(--muted); max-width: 70ch; }
+  /* The architecture diagram. Page CSS styles the inline SVG through classes, so it
+     follows the theme tokens; only the tiering path wears the accent. */
+  .arch { margin: 20px 0 0; padding: 16px 16px 10px; background: var(--panel);
+          border: 1px solid var(--border); border-radius: 8px; }
+  .arch .scroll { overflow-x: auto; }
+  .arch svg { display: block; width: 100%; min-width: 760px; height: auto; color: var(--muted);
+              font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .arch .box { fill: var(--bg); stroke: var(--border); stroke-width: 1.5; }
+  .arch .region { fill: none; stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .arch .title { fill: var(--fg); font-size: 13px; font-weight: 600; }
+  .arch .sub { fill: var(--muted); font-size: 11px; font-family: var(--mono); }
+  .arch .region-label { fill: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .06em; }
+  .arch .edge { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+  .arch .edge-label { fill: var(--muted); font-size: 11px; font-family: var(--mono); }
+  .arch .hot { stroke: var(--accent); stroke-width: 2; }
+  .arch .hot-box { stroke: var(--accent); stroke-width: 2; }
+  .arch .hot-label { fill: var(--accent); }
+  .arch .head { fill: var(--muted); }
+  .arch .head-hot { fill: var(--accent); }
+  /* Table boxes are clickable: an (i) badge in the corner, and the whole box as the hit
+     target. The hit rect is transparent but painted, so it receives the pointer. */
+  .arch .tbl { cursor: pointer; outline: none; }
+  .arch .tbl .hit { fill: transparent; stroke: transparent; stroke-width: 2; }
+  .arch .tbl:hover .hit, .arch .tbl:focus-visible .hit { stroke: var(--accent); }
+  .arch .badge circle { fill: var(--panel); stroke: var(--muted); stroke-width: 1.4; }
+  .arch .badge text { fill: var(--fg); font: italic 700 11px Georgia, serif; }
+  .arch .tbl:hover .badge circle, .arch .tbl:focus-visible .badge circle { stroke: var(--accent); fill: var(--accent); }
+  .arch .tbl:hover .badge text, .arch .tbl:focus-visible .badge text { fill: var(--accent-fg); }
+  .arch figcaption { margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .arch figcaption b { color: var(--fg); font-weight: 600; }
+
+  .start { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 24px 0 8px;
+           padding: 18px 20px; border-radius: 8px; background: var(--panel);
+           border: 1px solid var(--border); border-left: 3px solid var(--accent); }
+  .start div { flex: 1 1 320px; }
+  .start strong { display: block; font-size: 17px; }
+  .start span { color: var(--muted); font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 6px;
+         background: var(--accent); color: var(--accent-fg); text-decoration: none; font-weight: 600; }
+  .btn:hover { filter: brightness(1.06); }
+  .btn:focus-visible, .card a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  section { margin-top: 32px; }
+  section > h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+                 margin: 0 0 10px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .card { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 14px 16px;
+          background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+  .card:hover { border-color: var(--muted); }
+  .card .top { display: flex; align-items: center; gap: 8px; }
+  .card a { color: var(--fg); font-weight: 600; text-decoration: none; }
+  /* The whole card is the link's hit target. */
+  .card a::after { content: ""; position: absolute; inset: 0; border-radius: 8px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .card .meta { margin-top: auto; padding-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 12px;
+                font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .lab { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--tint);
+         color: var(--muted); white-space: nowrap; margin-left: auto; }
+
+  /* Reachability: a dot plus a word, so it never relies on colour alone. */
+  .status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+  .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .status.up::before { background: var(--ok); }
+  .status.down::before { background: var(--err); }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border);
+          border-radius: 8px; overflow: hidden; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  th { font-weight: 600; color: var(--muted); font-size: 13px; background: var(--tint); }
+  td code { font-family: var(--mono); font-size: 13px; }
+  .scroll { overflow-x: auto; }
+  /* The table-structure panel. */
+  #tinfo { width: min(760px, calc(100vw - 32px)); max-height: min(86vh, 900px); padding: 0;
+           border: 1px solid var(--border); border-radius: 10px; background: var(--panel); color: var(--fg);
+           box-shadow: 0 12px 48px rgba(0,0,0,.35); }
+  #tinfo[open] { display: flex; flex-direction: column; }
+  #tinfo::backdrop { background: rgba(10, 12, 16, .55); }
+  #tinfo .hd { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px 12px;
+               border-bottom: 1px solid var(--border); }
+  #tinfo .hd div { flex: 1; min-width: 0; }
+  #tinfo h2 { margin: 0; font-size: 17px; font-family: var(--mono); word-break: break-all; }
+  #tinfo .kind { display: inline-block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+  #tinfo .close { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 6px; cursor: pointer;
+                  border: 1px solid var(--border); background: var(--panel); color: var(--fg); font-size: 14px; }
+  #tinfo .bd { overflow: auto; padding: 14px 18px 18px; }
+  #tinfo .bd > p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  #tinfo h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+              margin: 16px 0 6px; font-weight: 600; }
+  #tinfo table { font-size: 13px; }
+  #tinfo td:first-child, #tinfo td:nth-child(2) { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+  #tinfo td.key::after { content: " PK"; font: 600 10px system-ui, sans-serif; color: var(--accent);
+                         margin-left: 4px; }
+  #tinfo dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
+  #tinfo dt { color: var(--muted); }
+  #tinfo dd { margin: 0; }
+  #tinfo code { font-family: var(--mono); font-size: 12.5px; }
+  #tinfo pre { margin: 0; padding: 10px 12px; background: var(--tint); border-radius: 6px; overflow: auto;
+               font-family: var(--mono); font-size: 12.5px; line-height: 1.5; }
+  #tinfo .qhd { display: flex; align-items: center; justify-content: space-between; }
+  #tinfo .copy { font: inherit; font-size: 12px; padding: 2px 10px; border-radius: 6px; cursor: pointer;
+                 border: 1px solid var(--border); background: var(--panel); color: var(--muted); }
+  footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+  footer code { font-family: var(--mono); }
+  @media (max-width: 600px) { header, main { padding-left: 16px; padding-right: 16px; } .intro h2 { font-size: 23px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Streaming Lakehouse Lab</h1>
+  <span class="spacer"></span>
+  <button id="theme" type="button"></button>
+</header>
+
+<main>
+  <div class="intro">
+    <h2>Streaming Lakehouse</h2>
+    <p>Stream order events from Kafka into Apache Fluss, enrich them with product data
+       replicated from PostgreSQL, tier the result into Apache Iceberg, and query the same
+       table live from Flink and historically from Trino.</p>
+    <figure class="arch">
+      <div class="scroll">
+      <svg viewBox="0 0 1100 500" role="img"
+           aria-label="Architecture: Flink jobs carry order events from Kafka and products from PostgreSQL CDC into Fluss tables and join them into orders_enriched; the tiering service commits orders_enriched to Iceberg on MinIO through Lakekeeper, where Trino reads it; a windowed job writes revenue to PostgreSQL for Grafana.">
+        <defs>
+          <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="head" d="M0,0 L10,5 L0,10 z"/>
+          </marker>
+          <marker id="head-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="head-hot" d="M0,0 L10,5 L0,10 z"/>
+          </marker>
+        </defs>
+
+        <!-- Sources -->
+        <text class="region-label" x="20" y="42">SOURCES</text>
+        <rect class="box" x="20" y="56" width="160" height="52" rx="6"/>
+        <text class="title" x="100" y="78" text-anchor="middle">Kafka</text>
+        <text class="sub" x="100" y="96" text-anchor="middle">orders_log topic</text>
+        <rect class="box" x="20" y="196" width="160" height="52" rx="6"/>
+        <text class="title" x="100" y="218" text-anchor="middle">PostgreSQL</text>
+        <text class="sub" x="100" y="236" text-anchor="middle">product_catalog</text>
+
+        <!-- Fluss -->
+        <rect class="region" x="262" y="20" width="398" height="300" rx="10"/>
+        <text class="region-label" x="278" y="42">APACHE FLUSS · fluss.orders</text>
+        <rect class="box" x="290" y="60" width="150" height="44" rx="6"/>
+        <text class="title" x="365" y="79" text-anchor="middle">orders_log</text>
+        <text class="sub" x="365" y="95" text-anchor="middle">Log table</text>
+        <rect class="box" x="290" y="200" width="150" height="44" rx="6"/>
+        <text class="title" x="365" y="219" text-anchor="middle">product_lookup</text>
+        <text class="sub" x="365" y="235" text-anchor="middle">PK table</text>
+        <rect class="box" x="484" y="130" width="160" height="44" rx="6"/>
+        <text class="title" x="564" y="149" text-anchor="middle">orders_enriched</text>
+        <text class="sub" x="564" y="165" text-anchor="middle">Log table</text>
+
+        <!-- Ingestion jobs -->
+        <line class="edge" x1="180" y1="82" x2="288" y2="82" marker-end="url(#head)"/>
+        <text class="edge-label" x="234" y="74" text-anchor="middle">kafka-to-fluss</text>
+        <line class="edge" x1="180" y1="222" x2="288" y2="222" marker-end="url(#head)"/>
+        <text class="edge-label" x="234" y="214" text-anchor="middle">pgcdc-to-fluss</text>
+
+        <!-- Enrichment: the stream and the lookup side meet at orders_enriched -->
+        <polyline class="edge" points="440,82 462,82 462,146 482,146" marker-end="url(#head)"/>
+        <polyline class="edge" points="440,222 462,222 462,158 482,158" marker-end="url(#head)"/>
+        <text class="edge-label" x="564" y="122" text-anchor="middle">product-enrichment</text>
+        <text class="edge-label" x="548" y="192" text-anchor="middle">lookup join</text>
+
+        <!-- Tiering: the lakehouse path -->
+        <line class="edge hot" x1="644" y1="152" x2="688" y2="152" marker-end="url(#head-hot)"/>
+        <rect class="box hot-box" x="690" y="126" width="140" height="52" rx="6"/>
+        <text class="title" x="760" y="148" text-anchor="middle">Tiering service</text>
+        <text class="sub" x="760" y="166" text-anchor="middle">one Flink job</text>
+        <line class="edge hot" x1="830" y1="152" x2="898" y2="152" marker-end="url(#head-hot)"/>
+        <text class="edge-label hot-label" x="862" y="144" text-anchor="middle">commits</text>
+
+        <!-- Iceberg -->
+        <rect class="region" x="900" y="20" width="180" height="264" rx="10"/>
+        <text class="region-label" x="916" y="42">APACHE ICEBERG</text>
+        <rect class="box" x="915" y="60" width="150" height="52" rx="6"/>
+        <text class="title" x="990" y="82" text-anchor="middle">Lakekeeper</text>
+        <text class="sub" x="990" y="100" text-anchor="middle">REST catalog</text>
+        <rect class="box" x="915" y="192" width="150" height="52" rx="6"/>
+        <text class="title" x="990" y="214" text-anchor="middle">MinIO</text>
+        <text class="sub" x="990" y="232" text-anchor="middle">Parquet + metadata</text>
+        <line class="edge" x1="990" y1="112" x2="990" y2="190" marker-end="url(#head)"/>
+        <text class="edge-label" x="998" y="156">points to</text>
+
+        <!-- Readers of the lake -->
+        <line class="edge" x1="990" y1="284" x2="990" y2="336" marker-end="url(#head)"/>
+        <text class="edge-label" x="998" y="314">SQL reads</text>
+        <rect class="box" x="915" y="338" width="150" height="52" rx="6"/>
+        <text class="title" x="990" y="360" text-anchor="middle">Trino</text>
+        <text class="sub" x="990" y="378" text-anchor="middle">in CloudBeaver</text>
+
+        <!-- Analytics: windowed job to PostgreSQL to Grafana -->
+        <polyline class="edge" points="620,174 620,456 698,456" marker-end="url(#head)"/>
+        <text class="edge-label" x="612" y="388" text-anchor="end">revenue-analytics-sink</text>
+        <text class="edge-label" x="612" y="403" text-anchor="end">5-min windows</text>
+        <rect class="box" x="700" y="430" width="150" height="52" rx="6"/>
+        <text class="title" x="775" y="452" text-anchor="middle">PostgreSQL</text>
+        <text class="sub" x="775" y="470" text-anchor="middle">revenue_5m</text>
+        <line class="edge" x1="850" y1="456" x2="913" y2="456" marker-end="url(#head)"/>
+        <text class="edge-label" x="881" y="448" text-anchor="middle">queries</text>
+        <rect class="box" x="915" y="430" width="150" height="52" rx="6"/>
+        <text class="title" x="990" y="452" text-anchor="middle">Grafana</text>
+        <text class="sub" x="990" y="470" text-anchor="middle">Order Analytics</text>
+
+        <!-- Clickable tables: the (i) badge and the whole box open the structure panel -->
+        <g class="tbl" data-table="kafka" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Show the structure of Kafka topic orders_log">
+          <rect class="hit" x="20" y="56" width="160" height="52" rx="6"/>
+          <g class="badge"><circle cx="169" cy="67" r="8"/><text x="169" y="70.5" text-anchor="middle">i</text></g>
+        </g>
+        <g class="tbl" data-table="product_catalog" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Show the structure of PostgreSQL table product_catalog">
+          <rect class="hit" x="20" y="196" width="160" height="52" rx="6"/>
+          <g class="badge"><circle cx="169" cy="207" r="8"/><text x="169" y="210.5" text-anchor="middle">i</text></g>
+        </g>
+        <g class="tbl" data-table="orders_log" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Show the structure of Fluss table orders_log">
+          <rect class="hit" x="290" y="60" width="150" height="44" rx="6"/>
+          <g class="badge"><circle cx="429" cy="71" r="8"/><text x="429" y="74.5" text-anchor="middle">i</text></g>
+        </g>
+        <g class="tbl" data-table="product_lookup" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Show the structure of Fluss table product_lookup">
+          <rect class="hit" x="290" y="200" width="150" height="44" rx="6"/>
+          <g class="badge"><circle cx="429" cy="211" r="8"/><text x="429" y="214.5" text-anchor="middle">i</text></g>
+        </g>
+        <g class="tbl" data-table="orders_enriched" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Show the structure of Fluss table orders_enriched">
+          <rect class="hit" x="484" y="130" width="160" height="44" rx="6"/>
+          <g class="badge"><circle cx="633" cy="141" r="8"/><text x="633" y="144.5" text-anchor="middle">i</text></g>
+        </g>
+        <g class="tbl" data-table="revenue_5m" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Show the structure of PostgreSQL table revenue_5m">
+          <rect class="hit" x="700" y="430" width="150" height="52" rx="6"/>
+          <g class="badge"><circle cx="839" cy="441" r="8"/><text x="839" y="444.5" text-anchor="middle">i</text></g>
+        </g>
+      </svg>
+      </div>
+      <figcaption>
+        Arrows named after a job (<code>kafka-to-fluss</code>, <code>pgcdc-to-fluss</code>,
+        <code>product-enrichment</code>, <code>revenue-analytics-sink</code>) are the Flink jobs you submit.
+        The <b>tiering service</b> is the only writer to the lake: set
+        <code>table.datalake.enabled</code> on a Fluss table and it starts committing that table
+        to Iceberg. Flink queries of <code>orders_enriched</code> then become <b>union reads</b> —
+        history from Iceberg, the freshest rows from Fluss — while Trino reads the Iceberg copy
+        with no Fluss involved. Click a table's ⓘ for its columns and how it is used.
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="start">
+    <div>
+      <strong>Start here: the Flink SQL editor</strong>
+      <span>Every lab statement is typed — or loaded from the Examples menu — and run here.</span>
+    </div>
+    <a class="btn" data-port="8084" data-path="/" href="#">Open the SQL editor →</a>
+  </div>
+
+  <section>
+    <h3>Build the pipeline</h3>
+    <div class="grid">
+      <div class="card" data-port="8084">
+        <div class="top"><a data-port="8084" data-path="/" href="#">Flink SQL editor</a><span class="lab">Labs 1–5</span></div>
+        <p>Write and run Flink SQL. Starts the tiering service with one click (Lab 3).</p>
+        <div class="meta"><span class="status">checking</span><span class="addr"></span></div>
+      </div>
+      <div class="card" data-port="8081">
+        <div class="top"><a data-port="8081" data-path="/" href="#">Flink Web UI</a><span class="lab">Labs 1–5</span></div>
+        <p>See, inspect and cancel the running jobs, their checkpoints and exceptions.</p>
+        <div class="meta"><span class="status">checking</span><span class="addr"></span></div>
+      </div>
+      <div class="card" data-port="8082">
+        <div class="top"><a data-port="8082" data-path="/topics/orders_log" href="#">Kafka Console</a><span class="lab">Lab 1</span></div>
+        <p>Browse the raw JSON order events on the Kafka topic <code>orders_log</code>.</p>
+        <div class="meta"><span class="status">checking</span><span class="addr"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3>Explore the lakehouse</h3>
+    <div class="grid">
+      <div class="card" data-port="8978">
+        <div class="top"><a data-port="8978" data-path="/" href="#">CloudBeaver (Trino)</a><span class="lab">Labs 3–4</span></div>
+        <p>Query the tiered Iceberg tables with Trino — no Flink or Fluss involved.</p>
+        <div class="meta"><span class="status">checking</span><span class="addr"></span></div>
+      </div>
+      <div class="card" data-port="8181">
+        <div class="top"><a data-port="8181" data-path="/ui" href="#">Lakekeeper</a><span class="lab">Lab 3</span></div>
+        <p>Browse the Iceberg REST catalog: the warehouse, namespaces and tables.</p>
+        <div class="meta"><span class="status">checking</span><span class="addr"></span></div>
+      </div>
+      <div class="card" data-port="9001">
+        <div class="top"><a data-port="9001" data-path="/browser/warehouse" href="#">MinIO Console</a><span class="lab">Lab 3</span></div>
+        <p>See the Parquet data and Iceberg metadata files on object storage.</p>
+        <div class="meta"><span class="status">checking</span><span class="addr"></span><span>admin / password</span></div>
+      </div>
+      <div class="card" data-port="8080">
+        <div class="top"><a data-port="8080" data-path="/ui/" href="#">Trino Web UI</a><span class="lab">Lab 4</span></div>
+        <p>Query history and plans for everything CloudBeaver runs. Any username.</p>
+        <div class="meta"><span class="status">checking</span><span class="addr"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3>Dashboards</h3>
+    <div class="grid">
+      <div class="card" data-port="3000">
+        <div class="top"><a data-port="3000" data-path="/d/streaming-lakehouse-orders" href="#">Grafana</a><span class="lab">Lab 5</span></div>
+        <p>The Order Analytics dashboard: 5-minute revenue, order lifecycle and category views. Fills in once the Lab 5 job runs.</p>
+        <div class="meta"><span class="status">checking</span><span class="addr"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3>Connection details</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Endpoint</th><th>From your machine</th><th>Inside the lab network (in SQL)</th><th>Credentials</th></tr></thead>
+        <tbody>
+          <tr><td>Kafka</td><td><code class="host" data-port="19092"></code></td><td><code>redpanda:9092</code></td><td>—</td></tr>
+          <tr><td>Fluss coordinator</td><td><code class="host" data-port="9123"></code></td><td><code>coordinator-server:9123</code></td><td>—</td></tr>
+          <tr><td>PostgreSQL <code>orders</code></td><td><code class="host" data-port="5432"></code></td><td><code>postgres:5432</code></td><td><code>root</code> / <code>admin1</code> · CDC: <code>cdc_user</code> / <code>admin1</code></td></tr>
+          <tr><td>Iceberg REST catalog</td><td><code class="host" data-port="8181" data-suffix="/catalog"></code></td><td><code>http://lakekeeper:8181/catalog</code></td><td>warehouse <code>warehouse</code></td></tr>
+          <tr><td>MinIO S3 API</td><td><code class="host" data-port="9000"></code></td><td><code>http://minio:9000</code></td><td><code>admin</code> / <code>password</code></td></tr>
+          <tr><td>Flink SQL Gateway (REST)</td><td><code class="host" data-port="8083"></code></td><td><code>http://sql-gateway:8083</code></td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <dialog id="tinfo" aria-labelledby="tinfoTitle">
+    <div class="hd">
+      <div><h2 id="tinfoTitle"></h2><span class="kind" id="tinfoKind"></span></div>
+      <button type="button" class="close" id="tinfoClose" aria-label="Close">✕</button>
+    </div>
+    <div class="bd" id="tinfoBody"></div>
+  </dialog>
+
+  <footer>
+    The step-by-step lab guide is <code>WORKSHOP.md</code> in the scenario folder. Status
+    dots check every 15 seconds whether each web UI answers.
+  </footer>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const host = location.hostname || "localhost";
+const url = (port, path = "/") => `http://${host}:${port}${path}`;
+
+// Every link and address is built from the host this page was opened on, so the same
+// page works on localhost and on a remote lab VM.
+document.querySelectorAll("a[data-port]").forEach(a => {
+  a.href = url(a.dataset.port, a.dataset.path);
+  a.target = "_blank"; a.rel = "noopener";
+});
+document.querySelectorAll(".card[data-port]").forEach(c => {
+  c.querySelector(".addr").textContent = `${host}:${c.dataset.port}`;
+});
+document.querySelectorAll("code.host").forEach(c => {
+  c.textContent = c.dataset.suffix ? `http://${host}:${c.dataset.port}${c.dataset.suffix}` : `${host}:${c.dataset.port}`;
+});
+
+// Reachability. The UIs are on other origins and send no CORS headers, so the response
+// is opaque — but an opaque answer still proves the port is serving, while a refused
+// connection or a timeout rejects the fetch.
+async function probe(card) {
+  const s = card.querySelector(".status");
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 4000);
+  try {
+    await fetch(url(card.dataset.port), { mode: "no-cors", cache: "no-store", signal: ctl.signal });
+    s.className = "status up"; s.textContent = "up";
+  } catch {
+    s.className = "status down"; s.textContent = "not reachable";
+  } finally { clearTimeout(timer); }
+}
+const probeAll = () => document.querySelectorAll(".card[data-port]").forEach(probe);
+probeAll();
+setInterval(probeAll, 15000);
+
+// ── Table structure panels ────────────────────────────────────────────────────
+// Kept in step with the DDL by hand: flink_sql/ddl/01_fluss.sql, flink_sql/ddl/02_sources.sql
+// and pg_streaming_lakehouse_ddl.sql. Columns are [name, type, note]; key: true marks the
+// primary key.
+const STATUS = "PLACED · PAID · SHIPPED · DELIVERED · CANCELLED";
+const ORDER_COLS = [
+  ["order_id", "STRING", "ORD-XXXXXXXX; ORD-TEST is the demo order that is never cancelled"],
+  ["customer_id", "STRING", "CUST-1001 … CUST-1040"],
+  ["product_id", "STRING", "PRD-00001 … PRD-00500"],
+  ["status", "STRING", STATUS],
+  ["amount", "DECIMAL(10, 2)", "order total, the same on every event of an order"],
+  ["event_time", "TIMESTAMP(3)", "event time; watermark 5 s behind"],
+];
+const PRODUCT_COLS = t => [
+  ["product_id", t[0], "", true], ["sku", t[1], ""], ["product_name", t[2], ""],
+  ["category", t[3], "10 categories"], ["brand", t[4], ""], ["unit_price", t[5], ""],
+  ["cost", t[5], ""], ["weight_kg", t[6], ""], ["in_stock", "BOOLEAN", ""],
+  ["rating", t[7], "3.0 – 5.0"], ["created_at", t[8], ""],
+];
+const TABLES = {
+  kafka: {
+    name: "orders_log", kind: "Kafka topic · Redpanda · 3 partitions",
+    about: "The raw event stream. One JSON message each time an order changes status, produced by the order-gen container, 5–20 events a second.",
+    colsTitle: "Message fields (JSON)", cols: ORDER_COLS,
+    facts: [
+      ["Flink table", "<code>orders_log_kafka</code> — in the in-memory <code>default_catalog</code>, so it is re-created in every new session"],
+      ["Read from", "<code>earliest-offset</code>: a new job replays the whole topic"],
+      ["Timestamp", "<code>event_time</code> arrives as <code>yyyy-MM-dd HH:mm:ss.SSS</code>, JSON's default SQL timestamp shape"],
+      ["Written by", "order-gen"],
+      ["Read by", "<code>kafka-to-fluss</code>"],
+      ["Lab step", "Lab 1, Step 3"],
+    ],
+    query: "SELECT * FROM orders_log_kafka;",
+  },
+  product_catalog: {
+    name: "public.product_catalog", kind: "PostgreSQL table · database orders",
+    about: "The product master data, seeded with 500 products. The source of truth that CDC replicates into Fluss.",
+    cols: PRODUCT_COLS(["VARCHAR(20)", "VARCHAR(20)", "VARCHAR(255)", "VARCHAR(50)", "VARCHAR(100)", "NUMERIC(10, 2)", "NUMERIC(6, 2)", "NUMERIC(2, 1)", "TIMESTAMP"]),
+    facts: [
+      ["Rows", "500 at start; every INSERT / UPDATE / DELETE flows on to Fluss"],
+      ["CDC setup", "<code>wal_level=logical</code>, user <code>cdc_user</code>, slot <code>flink_cdc_lakehouse_slot</code>, publication <code>all_tables_pub</code>, <code>REPLICA IDENTITY FULL</code>"],
+      ["Flink table", "<code>product_catalog_cdc</code> (<code>postgres-cdc</code> connector): a snapshot, then the change stream"],
+      ["Read by", "<code>pgcdc-to-fluss</code>"],
+      ["Lab step", "Lab 2, Step 7"],
+    ],
+    query: "UPDATE product_catalog SET unit_price = 1.99\nWHERE product_id = 'PRD-00001';   -- in psql; watch it reach Fluss",
+  },
+  orders_log: {
+    name: "fluss.orders.orders_log", kind: "Fluss Log table · append-only · 3 buckets",
+    about: "The durable, replayable copy of the Kafka topic. Unlike Kafka it has no retention window, which is what makes tiering it safe.",
+    cols: ORDER_COLS,
+    facts: [
+      ["Written by", "<code>kafka-to-fluss</code>"],
+      ["Read by", "<code>product-enrichment</code> (the stream side of the lookup join), <code>order-status-sync</code> (bonus)"],
+      ["Survives a session", "Yes — the table lives in Fluss, not in Flink"],
+      ["Lab step", "Lab 1, Step 2"],
+    ],
+    query: "SELECT * FROM fluss.orders.orders_log WHERE order_id = 'ORD-TEST';",
+  },
+  product_lookup: {
+    name: "fluss.orders.product_lookup", kind: "Fluss Primary Key table · upserts · 3 buckets",
+    about: "A live mirror of PostgreSQL's product_catalog, one row per product. A PK table is what makes it usable as the lookup side of a join.",
+    cols: PRODUCT_COLS(["STRING", "STRING", "STRING", "STRING", "STRING", "DECIMAL(10, 2)", "DECIMAL(6, 2)", "DECIMAL(2, 1)", "TIMESTAMP(3)"]),
+    facts: [
+      ["Written by", "<code>pgcdc-to-fluss</code> — inserts, updates and deletes, applied by primary key"],
+      ["Read by", "<code>product-enrichment</code>, as a point lookup per order: <code>FOR SYSTEM_TIME AS OF proc_time</code>"],
+      ["Rows", "500, plus whatever you add in PostgreSQL"],
+      ["Lab step", "Lab 2, Step 6"],
+    ],
+    query: "SELECT COUNT(*) AS products FROM fluss.orders.product_lookup;",
+  },
+  orders_enriched: {
+    name: "fluss.orders.orders_enriched", kind: "Fluss Log table · append-only · 3 buckets · tiered to Iceberg",
+    about: "Every order event with its product's name, category and price. The table the workshop tiers into the lake, and the single source for both real-time and historical queries.",
+    cols: [
+      ["order_id", "STRING", ""], ["customer_id", "STRING", ""], ["product_id", "STRING", ""],
+      ["product_name", "STRING", "from product_lookup"], ["category", "STRING", "from product_lookup"],
+      ["status", "STRING", STATUS], ["amount", "DECIMAL(10, 2)", ""],
+      ["unit_price", "DECIMAL(10, 2)", "from product_lookup"],
+      ["event_time", "TIMESTAMP(3)", "event time; watermark 5 s behind"],
+    ],
+    facts: [
+      ["Written by", "<code>product-enrichment</code> (a lookup join, so insert-only)"],
+      ["Read by", "the tiering service, <code>revenue-analytics-sink</code>, your SELECTs"],
+      ["Tiering", "enabled with <code>'table.datalake.enabled' = 'true'</code>, freshness <code>30s</code>"],
+      ["Iceberg copy", "<code>warehouse.orders.orders_enriched</code> in Trino — the same columns plus <code>__bucket</code>, <code>__offset</code>, <code>__timestamp</code>"],
+      ["Union read", "once tiered, a Flink SELECT reads history from Iceberg and the freshest rows from Fluss"],
+      ["Iceberg-only view", "<code>fluss.orders.`orders_enriched$lake`</code>; snapshots in <code>`orders_enriched$lake$snapshots`</code>"],
+      ["Lab step", "Lab 2, Step 9 · tiered in Lab 3, Step 12"],
+    ],
+    query: "SELECT * FROM fluss.orders.orders_enriched;",
+  },
+  revenue_5m: {
+    name: "public.revenue_5m", kind: "PostgreSQL table · database orders · one row per 5-minute window and category",
+    about: "Order analytics for Grafana. Every order emits one event per status, so each measure counts a single status: revenue is what was booked (PLACED), delivered and cancelled revenue what was fulfilled and lost.",
+    cols: [
+      ["window_start", "TIMESTAMP", "", true], ["window_end", "TIMESTAMP", "", true], ["category", "VARCHAR(30)", "", true],
+      ["order_count", "BIGINT", "orders booked (PLACED)"], ["revenue", "NUMERIC(12, 2)", "value booked"],
+      ["avg_order_value", "NUMERIC(10, 2)", "of booked orders"], ["max_order_value", "NUMERIC(10, 2)", "of booked orders"],
+      ["avg_unit_price", "NUMERIC(10, 2)", "of booked orders"],
+      ["paid_count", "BIGINT", "orders that reached PAID"], ["shipped_count", "BIGINT", "… SHIPPED"],
+      ["delivered_count", "BIGINT", "… DELIVERED"], ["cancelled_count", "BIGINT", "… CANCELLED"],
+      ["delivered_revenue", "NUMERIC(12, 2)", "value fulfilled"], ["cancelled_revenue", "NUMERIC(12, 2)", "value lost"],
+      ["event_count", "BIGINT", "every event in the window"], ["unique_customers", "BIGINT", "distinct, per category"],
+      ["unique_products", "BIGINT", "distinct, per category"],
+    ],
+    facts: [
+      ["Written by", "<code>revenue-analytics-sink</code> — <code>TUMBLE</code> over <code>orders_enriched</code>, upserted through the JDBC table <code>revenue_5m_sink</code>"],
+      ["Freshness", "a row is written when its window closes: 5 minutes, plus the 5 s watermark"],
+      ["Read by", "Grafana, the <i>Order Analytics</i> dashboard"],
+      ["Lab step", "Lab 5, Step 19"],
+    ],
+    query: "SELECT window_start, category, order_count, revenue, cancelled_count\nFROM revenue_5m ORDER BY window_start DESC LIMIT 10;   -- in psql",
+  },
+};
+
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let lastTrigger = null;
+
+function openTable(key, trigger) {
+  const t = TABLES[key];
+  if (!t) return;
+  lastTrigger = trigger;
+  $("tinfoTitle").textContent = t.name;
+  $("tinfoKind").textContent = t.kind;
+  const rows = t.cols.map(([n, ty, note, key]) =>
+    `<tr><td class="${key ? "key" : ""}">${esc(n)}</td><td>${esc(ty)}</td><td>${esc(note || "")}</td></tr>`).join("");
+  const facts = t.facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("");
+  $("tinfoBody").innerHTML = `
+    <p>${esc(t.about)}</p>
+    <h3>${esc(t.colsTitle || `Columns (${t.cols.length})`)}</h3>
+    <div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <h3>Key facts</h3><dl>${facts}</dl>
+    <div class="qhd"><h3>Try it</h3><button type="button" class="copy">Copy</button></div>
+    <pre></pre>`;
+  $("tinfoBody").querySelector("pre").textContent = t.query;
+  $("tinfoBody").querySelector(".copy").onclick = async e => {
+    const btn = e.currentTarget;
+    try { await navigator.clipboard.writeText(t.query); }
+    catch {  // no clipboard API outside a secure context (e.g. http on a remote VM)
+      const ta = Object.assign(document.createElement("textarea"), { value: t.query });
+      document.body.append(ta); ta.select(); document.execCommand("copy"); ta.remove();
+    }
+    btn.textContent = "Copied"; setTimeout(() => btn.textContent = "Copy", 1200);
+  };
+  $("tinfo").showModal();
+  $("tinfoBody").scrollTop = 0;
+}
+document.querySelectorAll(".arch .tbl").forEach(g => {
+  g.addEventListener("click", () => openTable(g.dataset.table, g));
+  g.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openTable(g.dataset.table, g); }
+  });
+});
+$("tinfoClose").onclick = () => $("tinfo").close();
+// Back to the box that opened it, so keyboard users keep their place in the diagram.
+$("tinfo").addEventListener("close", () => lastTrigger && lastTrigger.focus());
+// A click on the backdrop lands on the <dialog> itself, outside its content box.
+$("tinfo").addEventListener("click", e => {
+  const r = $("tinfo").getBoundingClientRect();
+  if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) $("tinfo").close();
+});
+
+// Light/dark toggle — the same behaviour as the SQL editor's: follow the OS until the
+// first click, then remember the choice.
+const darkQuery = matchMedia("(prefers-color-scheme: dark)");
+const isDark = () => (document.documentElement.dataset.theme || (darkQuery.matches ? "dark" : "light")) === "dark";
+function paintTheme() {
+  const next = isDark() ? "light" : "dark";
+  $("theme").textContent = isDark() ? "☀" : "☾";
+  $("theme").title = `Switch to ${next} mode`;
+  $("theme").setAttribute("aria-label", `Switch to ${next} mode`);
+}
+$("theme").onclick = () => {
+  const t = isDark() ? "light" : "dark";
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("home.theme", t); } catch {}
+  paintTheme();
+};
+darkQuery.addEventListener("change", paintTheme);
+paintTheme();
+</script>
+</body>
+</html>

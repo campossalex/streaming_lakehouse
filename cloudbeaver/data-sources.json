@@ -1,0 +1,25 @@
+{
+  "folders": {},
+  "connections": {
+    "trino-lakehouse": {
+      "provider": "generic",
+      "driver": "trino_jdbc",
+      "name": "Trino — Lakehouse",
+      "description": "Iceberg tables tiered by Fluss, catalogued by Lakekeeper. Query them as warehouse.orders.*",
+      "save-password": true,
+      "show-system-objects": false,
+      "configuration": {
+        "host": "trino",
+        "port": "8080",
+        "database": "warehouse",
+        "url": "jdbc:trino://trino:8080/warehouse",
+        "configurationType": "MANUAL",
+        "type": "dev",
+        "auth-model": "native",
+        "auth-properties": {
+          "user": "workshop"
+        }
+      }
+    }
+  }
+}
