@@ -86,6 +86,7 @@
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 6px;
          background: var(--accent); color: var(--accent-fg); text-decoration: none; font-weight: 600; }
   .btn:hover { filter: brightness(1.06); }
+  .btn.alt { background: var(--panel); color: var(--accent); border: 1px solid var(--accent); }
   .btn:focus-visible, .card a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   section { margin-top: 32px; }
@@ -298,6 +299,8 @@
       <span>Every lab statement is typed — or loaded from the Examples menu — and run here.</span>
     </div>
     <a class="btn" data-port="8084" data-path="/" href="#">Open the SQL editor →</a>
+    <a class="btn alt" data-port="8084" data-path="/pipeline" href="#"
+       title="Build the same pipeline from the architecture diagram: create tables, deploy jobs, view data">Interactive pipeline →</a>
   </div>
 
   <section>
@@ -384,7 +387,7 @@
   </dialog>
 
   <footer>
-    The step-by-step lab guide is <code>WORKSHOP.md</code> in the scenario folder. Status
+    The step-by-step lab guide is <code>WORKSHOP.md</code> in the repository. Status
     dots check every 15 seconds whether each web UI answers.
   </footer>
 </main>
@@ -426,7 +429,7 @@ probeAll();
 setInterval(probeAll, 15000);
 
 // ── Table structure panels ────────────────────────────────────────────────────
-// Kept in step with the DDL by hand: flink_sql/ddl/01_fluss.sql, flink_sql/ddl/02_sources.sql
+// Kept in step with the DDL by hand: flink_sql/ddl/*.sql
 // and pg_streaming_lakehouse_ddl.sql. Columns are [name, type, note]; key: true marks the
 // primary key.
 const STATUS = "PLACED · PAID · SHIPPED · DELIVERED · CANCELLED";
@@ -513,7 +516,7 @@ const TABLES = {
       ["Iceberg copy", "<code>warehouse.orders.orders_enriched</code> in Trino — the same columns plus <code>__bucket</code>, <code>__offset</code>, <code>__timestamp</code>"],
       ["Union read", "once tiered, a Flink SELECT reads history from Iceberg and the freshest rows from Fluss"],
       ["Iceberg-only view", "<code>fluss.orders.`orders_enriched$lake`</code>; snapshots in <code>`orders_enriched$lake$snapshots`</code>"],
-      ["Lab step", "Lab 2, Step 9 · tiered in Lab 3, Step 12"],
+      ["Lab step", "Lab 2, Step 9 · tiered in Lab 3, Step 11"],
     ],
     query: "SELECT * FROM fluss.orders.orders_enriched;",
   },
@@ -532,7 +535,7 @@ const TABLES = {
       ["unique_products", "BIGINT", "distinct, per category"],
     ],
     facts: [
-      ["Written by", "<code>revenue-analytics-sink</code> — <code>TUMBLE</code> over <code>orders_enriched</code>, upserted through the JDBC table <code>revenue_5m_sink</code>"],
+      ["Written by", "<code>revenue-analytics-sink</code> — <code>TUMBLE</code> over <code>orders_enriched</code>, upserted into <code>postgres.orders.revenue_5m</code> through the Postgres JDBC catalog"],
       ["Freshness", "a row is written when its window closes: 5 minutes, plus the 5 s watermark"],
       ["Read by", "Grafana, the <i>Order Analytics</i> dashboard"],
       ["Lab step", "Lab 5, Step 19"],

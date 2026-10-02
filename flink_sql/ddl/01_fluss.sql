@@ -29,7 +29,8 @@ CREATE CATALOG IF NOT EXISTS fluss WITH (
 
 -- ------------------------------------------- Step 2: database + the Log table
 -- A Fluss Log table is an ordered, append-only store. The WATERMARK lets it drive
--- event-time windows later (Lab 5).
+-- event-time windows later (Lab 5). bucket.key keeps all of an order's events in one
+-- bucket, so they are read back in the order they were written.
 CREATE DATABASE IF NOT EXISTS fluss.orders;
 
 CREATE TABLE IF NOT EXISTS fluss.orders.orders_log (
@@ -41,7 +42,8 @@ CREATE TABLE IF NOT EXISTS fluss.orders.orders_log (
   `event_time`  TIMESTAMP(3),
   WATERMARK FOR `event_time` AS `event_time` - INTERVAL '5' SECOND
 ) WITH (
-  'bucket.num' = '3'
+  'bucket.num' = '3',
+  'bucket.key' = 'order_id'
 );
 
 
@@ -85,6 +87,11 @@ CREATE TABLE IF NOT EXISTS fluss.orders.orders_enriched (
 
 -- ----------------------------------- Bonus Step 21: order_status (PK table)
 -- One row per order, upserted in place as it moves PLACED -> DELIVERED.
+--
+-- The versioned merge engine keeps, per key, the row with the highest last_update and
+-- ignores writes with an older one. With the default (last write wins), an event read
+-- out of order — e.g. while the job replays the log from the start — could move an
+-- order back from DELIVERED to SHIPPED.
 CREATE TABLE IF NOT EXISTS fluss.orders.order_status (
   `order_id`    STRING,
   `customer_id` STRING,
@@ -93,5 +100,7 @@ CREATE TABLE IF NOT EXISTS fluss.orders.order_status (
   `last_update` TIMESTAMP(3),
   PRIMARY KEY (`order_id`) NOT ENFORCED
 ) WITH (
-  'bucket.num' = '3'
+  'bucket.num'                              = '3',
+  'table.merge-engine'                      = 'versioned',
+  'table.merge-engine.versioned.ver-column' = 'last_update'
 );

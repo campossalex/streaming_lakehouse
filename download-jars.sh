@@ -24,7 +24,7 @@ FLUSS_VERSION="0.9.1-incubating"
 ICEBERG_VERSION="1.10.1"
 KAFKA_CONNECTOR_VERSION="3.3.0-1.20"
 CDC_CONNECTOR_VERSION="3.2.1"
-JDBC_CONNECTOR_VERSION="3.3.0-1.20"
+JDBC_CONNECTOR_VERSION="3.3.0-1.20"   # core + postgres modules, see below
 POSTGRES_DRIVER_VERSION="42.7.4"
 
 LIB_DIR="$(dirname "$0")/lib"
@@ -97,9 +97,25 @@ download "flink-sql-connector-kafka-${KAFKA_CONNECTOR_VERSION}.jar" \
 download "flink-sql-connector-postgres-cdc-${CDC_CONNECTOR_VERSION}.jar" \
   "$MAVEN/org/apache/flink/flink-sql-connector-postgres-cdc/${CDC_CONNECTOR_VERSION}/flink-sql-connector-postgres-cdc-${CDC_CONNECTOR_VERSION}.jar"
 
-# Lab 5 only: the revenue_5m sink in PostgreSQL.
-download "flink-connector-jdbc-${JDBC_CONNECTOR_VERSION}.jar" \
-  "$MAVEN/org/apache/flink/flink-connector-jdbc/${JDBC_CONNECTOR_VERSION}/flink-connector-jdbc-${JDBC_CONNECTOR_VERSION}.jar"
+# Lab 5 only: the postgres JDBC catalog (ddl/03_postgres.sql) and its revenue_5m sink.
+#
+# The core and postgres modules, NOT the all-in-one flink-connector-jdbc JAR. That one
+# registers both the deprecated and the new JdbcCatalogFactory under 'jdbc', and every
+# CREATE CATALOG ... 'type' = 'jdbc' fails with
+#   Multiple factories for identifier 'jdbc' that implement 'CatalogFactory'
+# The core module also carries the 'connector' = 'jdbc' table factory.
+download "flink-connector-jdbc-core-${JDBC_CONNECTOR_VERSION}.jar" \
+  "$MAVEN/org/apache/flink/flink-connector-jdbc-core/${JDBC_CONNECTOR_VERSION}/flink-connector-jdbc-core-${JDBC_CONNECTOR_VERSION}.jar"
+
+download "flink-connector-jdbc-postgres-${JDBC_CONNECTOR_VERSION}.jar" \
+  "$MAVEN/org/apache/flink/flink-connector-jdbc-postgres/${JDBC_CONNECTOR_VERSION}/flink-connector-jdbc-postgres-${JDBC_CONNECTOR_VERSION}.jar"
+
+# A lib/ populated by an earlier version of this script would still carry the all-in-one
+# JAR, and both on the classpath bring the duplicate factory back.
+if [ -f "$LIB_DIR/flink-connector-jdbc-${JDBC_CONNECTOR_VERSION}.jar" ]; then
+  echo "  [remove] flink-connector-jdbc-${JDBC_CONNECTOR_VERSION}.jar (duplicate 'jdbc' catalog factory, see above)"
+  rm -f "$LIB_DIR/flink-connector-jdbc-${JDBC_CONNECTOR_VERSION}.jar"
+fi
 
 download "postgresql-${POSTGRES_DRIVER_VERSION}.jar" \
   "$MAVEN/org/postgresql/postgresql/${POSTGRES_DRIVER_VERSION}/postgresql-${POSTGRES_DRIVER_VERSION}.jar"

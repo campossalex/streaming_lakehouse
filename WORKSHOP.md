@@ -12,9 +12,9 @@ Kafka topic `orders_log`. Each event is an order moving through its lifecycle: `
 ingestion → state → enrichment pipeline, enable Fluss's native tiering to Iceberg, and
 then query the very same table both as a live stream and as a historical Iceberg table.
 
-This is the open-source edition of the Ververica Platform workshop in
-`../streaming_lakehouse`. The labs and step numbers are the same; what changes is where
-you type the SQL and how a job gets deployed.
+This is the open-source edition of the Ververica Platform streaming lakehouse workshop.
+The labs and step numbers are the same; what changes is where you type the SQL and how a
+job gets deployed.
 
 ## Your tools
 
@@ -37,8 +37,8 @@ running, and nothing has been submitted yet.
 - Type or paste SQL into the editor and press **Run** — or <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Enter</kbd>.
   With text selected, only the selection runs; otherwise the whole editor runs, one
   statement after another, each with its own result panel.
-- A streaming `SELECT` keeps its panel live until you press **Cancel**. Cancel it before
-  moving on — each one is a real Flink job holding a slot.
+- A streaming `SELECT` keeps its panel live until you press the **Cancel** button on that
+  panel. Cancel it before moving on — each one is a real Flink job holding a slot.
 - An `INSERT INTO` becomes a **long-running Flink job**. Its panel links to the job in
   the Flink Web UI, and it keeps running when you cancel, close the tab or start a new
   query. That is how a job is "deployed" here: there are no drafts and no deployments,
@@ -93,9 +93,13 @@ CREATE TABLE IF NOT EXISTS fluss.orders.orders_log (
   `event_time`  TIMESTAMP(3),
   WATERMARK FOR `event_time` AS `event_time` - INTERVAL '5' SECOND
 ) WITH (
-  'bucket.num' = '3'
+  'bucket.num' = '3',
+  'bucket.key' = 'order_id'
 );
 ```
+
+`bucket.key` routes every event of an order to the same bucket, so an order's events are
+always read back in the order they were written.
 
 `SHOW TABLES IN fluss.orders;` now lists `orders_log` — empty for now, since nothing is
 writing to it yet.
@@ -159,6 +163,8 @@ SELECT
   `amount`,
   `event_time`
 FROM orders_log_kafka;
+
+RESET 'pipeline.name';
 ```
 
 The result panel shows a link to the new job. Open the **Flink Web UI** — `kafka-to-fluss`
@@ -166,8 +172,14 @@ is listed under *Running Jobs*. Leave it running for the rest of the workshop.
 
 > [!NOTE]
 > `SET 'pipeline.name'` names the job in the Flink Web UI. It is a session setting, so it
-> sticks: run `RESET 'pipeline.name';` afterwards, or your next queries will show up
-> under the same name. The job examples in the menu do this for you.
+> sticks: that is what the `RESET 'pipeline.name';` at the end is for — without it, your
+> next queries would show up under the same name. Every job in this guide ends with one.
+
+> [!WARNING]
+> Run this `INSERT` **once**. A second copy is a second job reading the topic from the
+> beginning, and every event lands in `orders_log` twice. If it happens, cancel the
+> newer `kafka-to-fluss` in the Flink Web UI to stop further duplicates. The same goes for
+> every `INSERT` in this guide.
 
 ### Step 5: Confirm order events are landing in Fluss
 
@@ -369,7 +381,30 @@ workshop's core idea comes in: Fluss can **continuously and automatically tier**
 table's data into Apache Iceberg, in the open Parquet + manifest format, without you
 writing an ingestion job.
 
-### Step 11: Start the Datalake Tiering Service
+### Step 11: Enable tiering on orders_enriched
+
+A table opts into tiering with a single `ALTER TABLE`:
+
+```sql
+ALTER TABLE fluss.orders.orders_enriched
+SET ('table.datalake.enabled' = 'true', 'table.datalake.freshness' = '30s');
+```
+
+`table.datalake.freshness` is how far behind Fluss the Iceberg copy is allowed to fall —
+30 seconds here instead of the default 3 minutes, so you don't spend the workshop
+staring at an empty Iceberg table.
+
+Nothing reaches Iceberg yet: the `ALTER TABLE` only marks the table. The service that
+actually writes to the lake is a Flink job, and you start it in the next step.
+
+> [!NOTE]
+> Run `SHOW CREATE TABLE fluss.orders.orders_enriched;`. Besides `table.datalake.enabled`,
+> you'll find `table.datalake.format = 'iceberg'` and the Lakekeeper settings — those were
+> already there. The Fluss cluster is configured for Iceberg, and copies that
+> configuration into every table when it is created. Enabling tiering on a table created
+> *before* that configuration existed is not possible: it would have to be re-created.
+
+### Step 12: Start the Datalake Tiering Service
 
 The **Fluss Datalake Tiering Service** is a long-running Flink job, shipped as a JAR by
 the Fluss project. It reads new Fluss data and writes it out as native Iceberg data files
@@ -381,7 +416,8 @@ run. You only have to start it.
 In the **Flink SQL editor** header, find **Tiering service: deployed, not running** and
 click **Start**. After a few seconds it turns green and says *running*, with a link to
 the job. The **Flink Web UI** now lists a job named `Fluss Lake Tiering Service - iceberg`.
-Leave it running — it will pick up every table you enable tiering on in the next step.
+Leave it running. On its first round it picks up `orders_enriched`, which you opted in
+in Step 11, and starts committing it to Iceberg.
 
 > [!TIP]
 > The deployed JAR is also listed in the Flink Web UI under **Submit New Job**, which is
@@ -393,27 +429,7 @@ Leave it running — it will pick up every table you enable tiering on in the ne
 
 > [!NOTE]
 > This is one service, shared by every Fluss table in the cluster. You don't deploy a
-> new tiering job per table — you tell an existing table to opt in.
-
-### Step 12: Enable tiering on orders_enriched
-
-Enabling tiering is a single `ALTER TABLE`:
-
-```sql
-ALTER TABLE fluss.orders.orders_enriched
-SET ('table.datalake.enabled' = 'true', 'table.datalake.freshness' = '30s');
-```
-
-`table.datalake.freshness` is how far behind Fluss the Iceberg copy is allowed to fall —
-30 seconds here instead of the default 3 minutes, so you don't spend the workshop
-staring at an empty Iceberg table.
-
-> [!NOTE]
-> Run `SHOW CREATE TABLE fluss.orders.orders_enriched;`. Besides `table.datalake.enabled`,
-> you'll find `table.datalake.format = 'iceberg'` and the Lakekeeper settings — those were
-> already there. The Fluss cluster is configured for Iceberg, and copies that
-> configuration into every table when it is created. Enabling tiering on a table created
-> *before* that configuration existed is not possible: it would have to be re-created.
+> new tiering job per table — you tell a table to opt in, as you did in Step 11.
 
 ### Step 13: Verify the tiered data landed in Iceberg
 
@@ -457,34 +473,47 @@ definition, two storage tiers working together automatically.
 Now that `orders_enriched` is tiering into Iceberg, let's see what that unlocks: the same
 table, queried two different ways, for two different purposes.
 
-### Step 15: Re-run the real-time query — this is now a union read
+### Step 15: One table, two tiers — the union read
 
-Back in the **Flink SQL editor**, run the exact query from Step 10 again:
-
-```sql
-SELECT * FROM fluss.orders.orders_enriched;
-```
-
-You didn't change a thing, but under the hood something important happened: Flink now
-performs a **union read**. It reads the rows already tiered into Iceberg straight from
-the Parquet files, and continues with the fresh rows that are still only in Fluss —
-returned as one seamless result. No query rewrite, no manual `UNION`, no awareness
-required that tiering is even happening.
-
-You can also read the Iceberg side on its own, through the same catalog, by adding
-`$lake` to the table name. It trails the Fluss side by up to one freshness interval:
+`orders_enriched` now lives in two places: the rows tiering has already committed are in
+Iceberg, and the most recent ones are still only in Fluss. Flink can read either. Back
+in the **Flink SQL editor**, run:
 
 ```sql
 SET 'execution.runtime-mode' = 'batch';
 
-SELECT status, COUNT(*) AS events
-FROM fluss.orders.`orders_enriched$lake`
-GROUP BY status;
+-- Lake layer only (Iceberg): the rows tiering has committed so far
+SELECT COUNT(*) AS events, MAX(event_time) AS latest_event
+FROM fluss.orders.`orders_enriched$lake`;
+
+-- Union read, both layers: Iceberg + the rows still only in Fluss
+SELECT COUNT(*) AS events, MAX(event_time) AS latest_event
+FROM fluss.orders.orders_enriched;
 
 SET 'execution.runtime-mode' = 'streaming';
 ```
 
 *Make sure the backtick characters are copied correctly.*
+
+The `$lake` suffix reads the Iceberg side alone. The plain table name is a **union
+read**: Flink reads the rows already tiered straight from the Iceberg Parquet files, then
+adds the rows that are still only in Fluss, and returns one result. No query rewrite and
+no manual `UNION`. Compare the two rows:
+
+- The union read has **more events**, and its `latest_event` is only seconds old.
+- The `$lake` side trails it: its `latest_event` is up to one tiering commit behind —
+  about a minute here.
+
+Run both queries again. The union read's count grows on every run. The `$lake` count
+stays put, then jumps once a tiering commit lands. Note the `$lake` numbers: you will
+see them again from Trino in the next step.
+
+> [!TIP]
+> Streaming reads are union reads too. `SELECT * FROM fluss.orders.orders_enriched;`
+> starts from the rows in Iceberg and carries on with live rows from Fluss. Expect a
+> pause before the first rows, typically 20 to 60 seconds, where Step 10 was almost
+> instant. Flink plans the Iceberg side first (it asks Lakekeeper for the snapshot and
+> lists its Parquet files). The query isn't stuck: leave it running.
 
 ### Step 16: Query the same table from Trino
 
@@ -495,7 +524,16 @@ SELECT * FROM warehouse.orders.orders_enriched LIMIT 20;
 ```
 
 This is the same data — but Trino has no idea Fluss or Flink exist. It reads plain
-Iceberg Parquet files and manifests through the Lakekeeper REST catalog. Note the three
+Iceberg Parquet files and manifests through the Lakekeeper REST catalog. That also means
+it sees only the Iceberg side: run
+
+```sql
+SELECT COUNT(*) AS events, MAX(event_time) AS latest_event
+FROM warehouse.orders.orders_enriched;
+```
+
+and you get the `$lake` numbers from Step 15 (or newer ones, if a tiering commit has
+landed since), never the union read's. Note the three
 columns at the end that Fluss added on the way in — `__bucket`, `__offset` and
 `__timestamp` — recording exactly where each row came from in Fluss.
 
@@ -511,12 +549,20 @@ SELECT
   COUNT(*)      AS orders,
   SUM(amount)   AS revenue
 FROM warehouse.orders.orders_enriched
-WHERE status <> 'CANCELLED'
+WHERE status = 'DELIVERED'
 GROUP BY product_name, category
 ORDER BY revenue DESC;
 ```
 
-You'll see lifetime revenue per product, computed as a single batch scan.
+You'll see lifetime delivered revenue per product, computed as a single batch scan.
+
+> [!NOTE]
+> Why `status = 'DELIVERED'` and not `status <> 'CANCELLED'`? `orders_enriched` holds one
+> row per status **event**, not per order: a delivered order has four rows (`PLACED`,
+> `PAID`, `SHIPPED`, `DELIVERED`), each with the full `amount`. Filtering on a single
+> status counts each order once. `<> 'CANCELLED'` would count it up to four times, and
+> would still include the `PLACED` and `PAID` rows of orders that were cancelled later.
+> Use `status = 'PLACED'` instead for revenue *booked*.
 
 ### Step 18 (bonus): Time travel with Iceberg
 
@@ -545,14 +591,15 @@ ORDER BY committed_at;
 Copy an older `snapshot_id`, substitute it below, and run it in **CloudBeaver**:
 
 ```sql
-SELECT COUNT(*) AS orders_at_that_point
+SELECT COUNT(*) AS events_at_that_point
 FROM warehouse.orders.orders_enriched FOR VERSION AS OF 1234567890123456789;
 ```
 
 You get the row count as it was at that exact snapshot — a question Fluss's live tables
 cannot answer, because Fluss doesn't keep point-in-time snapshots the way Iceberg does.
 Trino can also travel by wall-clock time:
-`FOR TIMESTAMP AS OF current_timestamp - INTERVAL '10' MINUTE`.
+`FOR TIMESTAMP AS OF current_timestamp - INTERVAL '2' MINUTE`. The point in time must be
+after the table's first snapshot, so a longer interval fails on a freshly tiered table.
 
 > [!TIP]
 > Flink can read Iceberg directly too, with no Fluss in the path. The *Bonus: Iceberg's
@@ -571,44 +618,38 @@ Trino can also travel by wall-clock time:
 ### Step 19: Create a windowed order analytics job
 
 This job aggregates `orders_enriched` into 5-minute tumbling windows per product category
-and writes the results to PostgreSQL, where Grafana reads them. First, the sink — a
-PostgreSQL table declared through Flink's JDBC connector:
+and writes the results to PostgreSQL, where Grafana reads them. The table it writes to,
+`revenue_5m`, already exists in PostgreSQL — so instead of describing it to Flink column
+by column, register PostgreSQL as a **catalog**:
 
 ```sql
-CREATE TABLE IF NOT EXISTS revenue_5m_sink (
-  `window_start`      TIMESTAMP(3),
-  `window_end`        TIMESTAMP(3),
-  `category`          STRING,
-  `order_count`       BIGINT,
-  `revenue`           DECIMAL(12, 2),
-  `avg_order_value`   DECIMAL(10, 2),
-  `max_order_value`   DECIMAL(10, 2),
-  `avg_unit_price`    DECIMAL(10, 2),
-  `paid_count`        BIGINT,
-  `shipped_count`     BIGINT,
-  `delivered_count`   BIGINT,
-  `cancelled_count`   BIGINT,
-  `delivered_revenue` DECIMAL(12, 2),
-  `cancelled_revenue` DECIMAL(12, 2),
-  `event_count`       BIGINT,
-  `unique_customers`  BIGINT,
-  `unique_products`   BIGINT,
-  PRIMARY KEY (`window_start`, `window_end`, `category`) NOT ENFORCED
-) WITH (
-  'connector'  = 'jdbc',
-  'url'        = 'jdbc:postgresql://postgres:5432/orders',
-  'table-name' = 'public.revenue_5m',
-  'username'   = 'root',
-  'password'   = 'admin1'
+CREATE CATALOG IF NOT EXISTS postgres WITH (
+  'type'             = 'jdbc',
+  'base-url'         = 'jdbc:postgresql://postgres:5432',
+  'default-database' = 'orders',
+  'username'         = 'root',
+  'password'         = 'admin1'
 );
 ```
+
+Every table in the `orders` database is now visible as `postgres.orders.<table>`, with
+its columns and primary key read from PostgreSQL itself. Look at the sink:
+
+```sql
+SHOW CREATE TABLE postgres.orders.revenue_5m;
+```
+
+Note the `PRIMARY KEY (window_start, window_end, category)` at the end — it came from
+PostgreSQL. It turns the JDBC sink into an **upsert** sink: each window and category is
+one row, updated in place rather than appended. Like `fluss`, the `postgres` catalog
+survives *New session*. Open the editor's **Catalog** panel to browse it.
 
 Then the job:
 
 ```sql
 SET 'pipeline.name' = 'revenue-analytics-sink';
 
-INSERT INTO revenue_5m_sink
+INSERT INTO postgres.orders.revenue_5m
 SELECT
   window_start,
   window_end,
@@ -660,9 +701,10 @@ already provisioned, wired to the `orders` database — nothing to import.
 - **Cancellation rate** and **average order value by category**, ranked.
 - **Category detail**: every measure in one sortable table.
 
-A window is written once it closes, so the first rows appear about 5 minutes after the
-job starts, and a new point every 5 minutes after that. Hover a panel title's ⓘ for what
-each one measures.
+The dashboard fills with history right away: the job starts from the beginning of
+`orders_enriched` (from Iceberg, through the union read), so every window since Lab 2 is
+computed and written as soon as the job has caught up. From then on, a window is written once it closes —
+a new point every 5 minutes. Hover a panel title's ⓘ for what each one measures.
 
 Congrats, you made it! You have built a complete streaming lakehouse — from a Kafka-fed
 generator, through Log and PK table storage in Fluss, to CDC-driven enrichment,
@@ -692,9 +734,16 @@ CREATE TABLE IF NOT EXISTS fluss.orders.order_status (
   `last_update` TIMESTAMP(3),
   PRIMARY KEY (`order_id`) NOT ENFORCED
 ) WITH (
-  'bucket.num' = '3'
+  'bucket.num'                              = '3',
+  'table.merge-engine'                      = 'versioned',
+  'table.merge-engine.versioned.ver-column' = 'last_update'
 );
 ```
+
+The **versioned merge engine** makes Fluss keep, per key, the row with the highest
+`last_update` — a write carrying an older version is ignored. With the default engine
+the last write wins, so a late-arriving `SHIPPED` event could overwrite `DELIVERED`.
+Fluss resolves that on the server, with no state in the Flink job.
 
 ### Step 22: Start the state aggregation job
 

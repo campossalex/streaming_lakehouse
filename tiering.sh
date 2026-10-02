@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tiering.sh — start the Fluss Datalake Tiering Service  (Lab 3, Step 11)
+# tiering.sh — start the Fluss Datalake Tiering Service  (Lab 3, Step 12)
 #
 # The tiering service is an ordinary Flink streaming job, shipped as a JAR by the Fluss
 # project (fluss-flink-tiering). It asks the Fluss coordinator which tables have

@@ -22,7 +22,7 @@ This page is how to deploy it. Once it is up:
 | **Docker** | Docker Engine with **Compose v2 ≥ 2.20** | `docker compose version` to check. |
 | **Tools** | `bash`, `curl`, `jq`, `git` | `start.sh` uses `curl` and `jq`. |
 | **Internet access** | On the first run | Images from Docker Hub and quay.io, JARs from Maven Central, Python packages from PyPI. |
-| **Free ports** | 80, 3000, 5432, 8080–8084, 8181, 8978, 9000, 9001, 9123, 19092 | `../coffee_shop_oss` and `../lakehouse_oss` use some of the same ports — stop them first (`docker compose stop` in their directories). |
+| **Free ports** | 80, 3000, 5432, 8080–8084, 8181, 8978, 9000, 9001, 9123, 19092 | Stop any other Docker Compose stack using them first. |
 
 Images exist for both x86_64 and arm64 (Apple Silicon, AWS Graviton); the stack has been
 tested on Apple Silicon and is built for x86_64 EC2 instances.
@@ -32,8 +32,8 @@ tested on Apple Silicon and is built for x86_64 EC2 instances.
 ## Run locally
 
 ```bash
-git clone https://github.com/campossalex/apacheflink-labday-2.git
-cd apacheflink-labday-2/scenarios/streaming_lakehouse_oss
+git clone https://github.com/campossalex/streaming_lakehouse.git
+cd streaming_lakehouse
 
 ./start.sh --services-only
 ```
@@ -102,16 +102,16 @@ Log out and back in (for the `docker` group), then:
 ```bash
 docker compose version      # must be ≥ 2.20
 
-git clone https://github.com/campossalex/apacheflink-labday-2.git
-cd apacheflink-labday-2/scenarios/streaming_lakehouse_oss
+git clone https://github.com/campossalex/streaming_lakehouse.git
+cd streaming_lakehouse
 ./start.sh --services-only
 ```
 
 On Ubuntu, `curl -fsSL https://get.docker.com | sudo sh` installs Docker with the
 Compose plugin in one step.
 
-No clone access on the instance? Copy the scenario directory instead:
-`rsync -av --exclude lib/ scenarios/streaming_lakehouse_oss/ ec2-user@<host>:streaming_lakehouse_oss/`
+No clone access on the instance? Copy the directory instead:
+`rsync -av --exclude lib/ --exclude .git/ ./ ec2-user@<host>:streaming_lakehouse/`
 (`start.sh` downloads `lib/` on the instance).
 
 ### 3. Network

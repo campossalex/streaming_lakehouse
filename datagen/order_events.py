@@ -82,12 +82,15 @@ def make_event(order_id: str, customer_id: str, product_id: str, status: str, am
 def get_producer():
     return KafkaProducer(
         bootstrap_servers=bootstrap_servers,
+        key_serializer=lambda k: k.encode("utf-8"),
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
     )
 
 
 def publish(producer, evt: dict) -> None:
-    producer.send(topic_orders, value=evt)
+    # Keyed by order_id: all of an order's events go to one partition, so they stay in
+    # lifecycle order for every consumer.
+    producer.send(topic_orders, key=evt["order_id"], value=evt)
     print(
         f"[ORDER] {evt['order_id']} | {evt['customer_id']} "
         f"| {evt['product_id']} | {evt['status']:10s} | ${evt['amount']}"
@@ -139,7 +142,13 @@ def main() -> None:
 
     while True:
         # ── Maybe place a new order ─────────────────────────────────────────
-        if len(active) < num_orders and random.random() < 0.20:
+        # Keeps the pool topped up at num_orders. Each tick advances ONE order, and an
+        # order needs ~3 advances to finish, so ~1 order completes every 3 ticks: placing
+        # with a higher chance than that (0.5) holds the pool near num_orders. With 200
+        # in flight an order lives ~1 minute (median; p90 ~2 minutes), long enough for
+        # PLACED/PAID/SHIPPED to be visible in order_status and Grafana. (At 0.2 the pool
+        # drained to a handful of orders that finished within seconds.)
+        if len(active) < num_orders and random.random() < 0.5:
             oid      = new_order_id()
             customer = random.choice(CUSTOMERS)
             product  = random.choice(PRODUCT_IDS)

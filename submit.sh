@@ -17,7 +17,7 @@
 #
 # Why the DDL is passed with -i
 # -----------------------------
-# The Kafka, CDC and JDBC tables in ddl/02_sources.sql live in Flink's default catalog,
+# The Kafka and CDC tables in ddl/02_sources.sql live in Flink's default catalog,
 # which is in-memory and per-session, so a table created by one submission does not exist
 # for the next. `sql-client.sh -i` loads the DDL into each session before running the -f
 # script. ddl/01_fluss.sql rides along: it is IF NOT EXISTS throughout, so after the first

@@ -1,4 +1,4 @@
--- PostgreSQL setup for the streaming_lakehouse_oss scenario.
+-- PostgreSQL setup for the streaming lakehouse workshop.
 --
 -- Run once by the postgres container's docker-entrypoint-initdb.d, connected to the
 -- `orders` database (POSTGRES_DB) as `root` (POSTGRES_USER, a superuser). A second

@@ -19,14 +19,22 @@ SHOW TABLES FROM warehouse.orders;
 -- in — __bucket, __offset and __timestamp — which record where each row came from.
 SELECT * FROM warehouse.orders.orders_enriched LIMIT 20;
 
--- Step 17: lifetime revenue per product, as one columnar batch scan of the history.
+-- Step 16: Trino sees only the Iceberg side, so this matches the $lake query in Flink
+-- (Step 15), never the union read.
+SELECT COUNT(*) AS events, MAX(event_time) AS latest_event
+FROM warehouse.orders.orders_enriched;
+
+-- Step 17: lifetime delivered revenue per product, as one columnar batch scan of the
+-- history. orders_enriched has one row per status EVENT, each with the full amount, so
+-- the filter must pick a single status — `<> 'CANCELLED'` would count an order up to
+-- four times. Use status = 'PLACED' for revenue booked.
 SELECT
   product_name,
   category,
   COUNT(*)    AS orders,
   SUM(amount) AS revenue
 FROM warehouse.orders.orders_enriched
-WHERE status <> 'CANCELLED'
+WHERE status = 'DELIVERED'
 GROUP BY product_name, category
 ORDER BY revenue DESC;
 
@@ -36,13 +44,14 @@ FROM warehouse.orders."orders_enriched$snapshots"
 ORDER BY committed_at;
 
 -- Step 18: time travel. Substitute a snapshot_id from the query above.
-SELECT COUNT(*) AS orders_at_that_point
+SELECT COUNT(*) AS events_at_that_point
 FROM warehouse.orders.orders_enriched FOR VERSION AS OF 1234567890123456789;
 
--- Step 18, the same by wall-clock time instead of id.
-SELECT COUNT(*) AS orders_ten_minutes_ago
+-- Step 18, the same by wall-clock time instead of id. The point in time must be after the
+-- table's first snapshot, so keep the interval short on a freshly tiered table.
+SELECT COUNT(*) AS events_two_minutes_ago
 FROM warehouse.orders.orders_enriched
-FOR TIMESTAMP AS OF current_timestamp - INTERVAL '10' MINUTE;
+FOR TIMESTAMP AS OF current_timestamp - INTERVAL '2' MINUTE;
 
 -- The files behind the table: many small ones, one set per commit.
 SELECT file_path, record_count, file_size_in_bytes

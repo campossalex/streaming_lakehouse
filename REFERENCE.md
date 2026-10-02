@@ -80,7 +80,8 @@ the tiering service.
 | File | Purpose |
 |------|---------|
 | `flink_sql/ddl/01_fluss.sql` | The `fluss` catalog, the `orders` database and all four Fluss tables |
-| `flink_sql/ddl/02_sources.sql` | Kafka source, postgres-cdc source, JDBC `revenue_5m` sink (column meanings: `pg_streaming_lakehouse_ddl.sql`) |
+| `flink_sql/ddl/02_sources.sql` | Kafka source and postgres-cdc source |
+| `flink_sql/ddl/03_postgres.sql` | The `postgres` JDBC catalog; Lab 5 writes `postgres.orders.revenue_5m` through it (column meanings: `pg_streaming_lakehouse_ddl.sql`) |
 | `flink_sql/jobs/10…50_*.sql` | One long-running `INSERT INTO` each, in lab order |
 | `flink_sql/lake/enable_tiering.sql` | The two `ALTER TABLE ... 'table.datalake.enabled'` statements |
 | `flink_sql/explore.sql` | The labs' SELECTs and ALTERs; one editor example per `-- ---- title` section |
@@ -102,20 +103,35 @@ Two services provide http://localhost:8084:
 - **`sql-editor`**: a small Flask app that serves the page and proxies to the gateway,
   which sends no CORS headers.
 
-It behaves as in `coffee_shop_oss` (see [its guide](../coffee_shop_oss/GUIDE.md) for the details): one session per
+One session per
 browser, kept across reloads; statements run in order, each with its own result panel; a
 streaming `SELECT` stays live until **Cancel**, which cancels its Flink job; an `INSERT
 INTO` is a real job that outlives the tab. The examples menu has each `ddl/` file, every
 `explore.sql` section and each job file (with a trailing `RESET 'pipeline.name'`).
 
-Differences from the coffee shop's copy:
+Details worth knowing:
 
-- **No placeholder substitution and no redaction.** This scenario has no secrets, so the
+- **Catalog browser.** The header's **Catalog** button opens a tree of catalogs,
+  databases, tables and columns (`/api/catalog/<session>`, which runs `SHOW` and
+  `DESCRIBE`). It runs in the page's own session, so it also lists that session's
+  in-memory tables. After a script, only the levels its successful `CREATE`, `DROP` and
+  `ALTER` statements touched are re-fetched (the catalog list, one catalog's databases,
+  or one database's tables, plus an altered table's columns), in place: open nodes stay
+  open and new ones flash. Unqualified names resolve against the session's current
+  catalog and database, followed through the script's `USE` statements. Views are
+  listed with the tables: Flink 1.20's `SHOW VIEWS` has no `IN` clause.
+  Each table's **Info** button opens its structure in a dialog
+  (`/api/catalog/<session>/structure`: `DESCRIBE` plus `SHOW CREATE TABLE`, or
+  `SHOW CREATE VIEW` for a view): columns with keys and watermarks, the `WITH` options,
+  tiering and merge-engine settings at a glance, and the full CREATE statement.
+- **Waiting indicator.** A running statement's panel shows a spinner and the elapsed
+  time until its first row arrives, with a hint after 10 s about slow starts on tiered
+  tables.
+- **No placeholder substitution and no redaction.** The workshop has no secrets, so the
   SQL files use literal hostnames and statements reach the gateway verbatim.
-- **Optimizer hints are kept.** The statement splitter used to drop every `/* ... */`
-  block, hints included, so `/*+ OPTIONS('snapshot-id' = '...') */` silently vanished
-  and a time-travel query read the latest snapshot instead. `/*+` is now passed through,
-  here and in `coffee_shop_oss/sql-editor/app.py`.
+- **Optimizer hints are kept.** The statement splitter drops `/* ... */` comments but
+  passes `/*+ ... */` through: dropping `/*+ OPTIONS('snapshot-id' = '...') */` would
+  silently make a time-travel query read the latest snapshot instead.
 - **`PRELOAD_DDL=true` is safe to combine with attendees' own DDL**: every statement in
   `ddl/` is `IF NOT EXISTS`.
 
@@ -146,8 +162,8 @@ Details worth knowing:
   forgets them and the header shows *not running* instead of *deployed, not running*.
   Start re-uploads the JAR itself first, so it still works.
 - **Where it shows.** The editor's `/api/config` reports `tiering: true` only when it finds
-  the JAR and `tiering.args` (mounted into `sql-editor` in `docker-compose.yml`). The same
-  `index.html` is used by `coffee_shop_oss`, where the control stays hidden.
+  the JAR and `tiering.args` (mounted into `sql-editor` in `docker-compose.yml`); without them the
+  control stays hidden.
 
 ---
 
@@ -159,8 +175,8 @@ persistent platform catalog.
 | Object | Where it is stored | After *New session*, a gateway restart, or a new `sql-client` |
 |--------|--------------------|------------------------------------------------------------------|
 | `fluss.orders.*` tables | In Fluss | **Still there** |
-| The `fluss` (and `iceberg`) catalog registration | File-based CatalogStore, volume `catalog-store`, shared by `sql-client` and `sql-gateway` | **Still there** |
-| `orders_log_kafka`, `product_catalog_cdc`, `revenue_5m_sink` | Flink's in-memory `default_catalog` | **Gone** — re-run `ddl/02_sources.sql` |
+| The `fluss`, `postgres` (and `iceberg`) catalog registrations | File-based CatalogStore, volume `catalog-store`, shared by `sql-client` and `sql-gateway` | **Still there** |
+| `orders_log_kafka`, `product_catalog_cdc` | Flink's in-memory `default_catalog` | **Gone** — re-run `ddl/02_sources.sql` |
 | Running jobs | Flink cluster | **Unaffected**: connector options were baked into the JobGraph at submission |
 
 So after a gateway restart, attendees only re-run `02_sources.sql`, and only if they
@@ -170,7 +186,7 @@ want to submit another job that reads Kafka or CDC.
 
 ## Implementation notes
 
-| Concern | How this scenario does it |
+| Concern | How this workshop does it |
 |---------|---------------------------|
 | Versions | Flink 1.20 (`apache/flink:1.20-java17`), Fluss 0.9.1-incubating, Iceberg 1.10.1 — the same versions the VVP edition's tiering setup uses |
 | Fluss config | `FLUSS_PROPERTIES` env var, appended to `server.yaml` by the image's entrypoint. Not a bind-mounted `server.yaml`: the entrypoint edits that file in place with `sed -i` |
@@ -180,7 +196,7 @@ want to submit another job that reads Kafka or CDC.
 | Iceberg plugin in Fluss | The image's `plugins/iceberg/` has `fluss-lake-iceberg` but not S3FileIO; the entrypoints copy `iceberg-aws`, `iceberg-aws-bundle` and `failsafe` in from `lib/` |
 | Hadoop | Trino's relocated `hadoop-apache`, not `flink-shaded-hadoop-2-uber` — see below |
 | CDC | `wal_level=logical` on the Postgres command line; slot and publication created by the init script |
-| Revenue sink | Explicit `jdbc` table with a PRIMARY KEY (upsert), not a JDBC catalog |
+| Revenue sink | `postgres.orders.revenue_5m` through a JDBC catalog, which reads the table's PRIMARY KEY from PostgreSQL (upsert). Needs the `flink-connector-jdbc-core` and `-postgres` JARs: the all-in-one `flink-connector-jdbc` 3.3.0 JAR registers two `jdbc` catalog factories and every `CREATE CATALOG` fails |
 | Grafana | Datasource and the *Order Analytics* dashboard (`grafana/dashboards/order_analytics.json`) provisioned, pinned to the datasource uid `lakehouse_dwh` |
 
 Four of these cost real debugging time and are worth knowing about before changing
@@ -257,8 +273,9 @@ the duplicate in the Flink Web UI.
 and each running job holds one. Six pipeline jobs plus several forgotten streaming
 SELECTs fill it up: cancel what you are not using, from the editor or the Flink Web UI.
 
-**Grafana panels are empty.** A window is written only once it closes: the first row
-lands about 5 minutes after `revenue-analytics-sink` starts. Check with
+**Grafana panels are empty.** A window is written only once it closes. On a table with
+history, every past window is written as soon as `revenue-analytics-sink` has
+caught up; on an empty one, the first row lands about 5 minutes after it starts. Check with
 `docker compose exec postgres psql -U root -d orders -c 'SELECT count(*) FROM revenue_5m;'`.
 
 ---

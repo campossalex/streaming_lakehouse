@@ -1,7 +1,7 @@
 -- =====================================================================
 -- JOB: revenue-analytics-sink  (Lab 5, Step 19 — optional)
 --
---   fluss.orders.orders_enriched  ->  TUMBLE 5 min  ->  PostgreSQL orders.revenue_5m  ->  Grafana
+--   fluss.orders.orders_enriched  ->  TUMBLE 5 min  ->  postgres.orders.revenue_5m  ->  Grafana
 --
 -- One row per window and category. Each order emits an event per status it reaches,
 -- so every measure is scoped to one status with FILTER (WHERE ...): order_count and
@@ -10,15 +10,20 @@
 -- over every event in the window.
 --
 -- Once orders_enriched is tiered (Lab 3), this streaming read is a union read too: it
--- starts from the Iceberg snapshot and continues from Fluss where Iceberg ends. The
--- first window closes 5 minutes plus the 5-second watermark delay after the job starts.
+-- starts from the Iceberg snapshot and continues from Fluss where Iceberg ends. Every
+-- window already in the history is written as soon as the job has caught up; after
+-- that, each new window is written once it closes (5 minutes plus the 5-second watermark
+-- delay).
+--
+-- revenue_5m is the PostgreSQL table itself, through the postgres catalog
+-- (ddl/03_postgres.sql); its primary key makes this an upsert sink.
 --
 -- Submit on its own with:  docker compose exec sql-client /opt/submit.sh revenue
 -- =====================================================================
 
 SET 'pipeline.name' = 'revenue-analytics-sink';
 
-INSERT INTO revenue_5m_sink
+INSERT INTO postgres.orders.revenue_5m
 SELECT
   window_start,
   window_end,

@@ -1,8 +1,9 @@
 -- =====================================================================
--- External sources and sinks  (Lab 1 Step 3, Lab 2 Step 7, Lab 5 Step 19)
+-- External sources  (Lab 1 Step 3, Lab 2 Step 7)
 --
--- These tables are NOT Fluss tables: they describe a Kafka topic, a PostgreSQL table
--- read through CDC, and a PostgreSQL table written through JDBC. They live in Flink's
+-- These tables are NOT Fluss tables: they describe a Kafka topic and a PostgreSQL table
+-- read through CDC. (Lab 5's PostgreSQL sink needs no table here: it comes from the
+-- postgres catalog in ddl/03_postgres.sql.) They live in Flink's
 -- default catalog, which is in-memory and per-session — so, unlike ddl/01_fluss.sql,
 -- they vanish when the session ends and every new session needs them again. That is why
 -- submit.sh hands every job this file with -i.
@@ -64,36 +65,4 @@ CREATE TABLE IF NOT EXISTS product_catalog_cdc (
   'slot.name'                 = 'flink_cdc_lakehouse_slot',
   'decoding.plugin.name'      = 'pgoutput',
   'debezium.publication.name' = 'all_tables_pub'
-);
-
-
--- -------------------------------------- Step 19: the revenue_5m JDBC sink
--- Column meanings are documented on the PostgreSQL table, in pg_streaming_lakehouse_ddl.sql.
--- Declared as a plain jdbc table rather than through a JDBC catalog: the PRIMARY KEY is
--- what makes it an upsert sink, and a reflected catalog table gives no control over it.
-CREATE TABLE IF NOT EXISTS revenue_5m_sink (
-  `window_start`      TIMESTAMP(3),
-  `window_end`        TIMESTAMP(3),
-  `category`          STRING,
-  `order_count`       BIGINT,
-  `revenue`           DECIMAL(12, 2),
-  `avg_order_value`   DECIMAL(10, 2),
-  `max_order_value`   DECIMAL(10, 2),
-  `avg_unit_price`    DECIMAL(10, 2),
-  `paid_count`        BIGINT,
-  `shipped_count`     BIGINT,
-  `delivered_count`   BIGINT,
-  `cancelled_count`   BIGINT,
-  `delivered_revenue` DECIMAL(12, 2),
-  `cancelled_revenue` DECIMAL(12, 2),
-  `event_count`       BIGINT,
-  `unique_customers`  BIGINT,
-  `unique_products`   BIGINT,
-  PRIMARY KEY (`window_start`, `window_end`, `category`) NOT ENFORCED
-) WITH (
-  'connector'  = 'jdbc',
-  'url'        = 'jdbc:postgresql://postgres:5432/orders',
-  'table-name' = 'public.revenue_5m',
-  'username'   = 'root',
-  'password'   = 'admin1'
 );

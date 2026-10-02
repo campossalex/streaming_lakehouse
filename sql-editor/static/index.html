@@ -8,6 +8,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/display/placeholder.min.js"></script>
+<link rel="stylesheet" href="/static/common.css">
+<script src="/static/common.js"></script>
 <script>
   // Before the stylesheet, so a saved choice applies on first paint instead of flashing
   // the OS theme. Same localStorage key prefix as the rest of the page (see `store`).
@@ -17,33 +20,6 @@
   } catch {}
 </script>
 <style>
-  :root {
-    --bg: #f6f7f9; --panel: #fff; --fg: #1d2330; --muted: #667085; --border: #d9dde4;
-    --accent: #e6526f; --accent-fg: #fff; --err-bg: #fdecef; --err: #b42335;
-    --stmt-bg: #eef0f6;
-    --ok: #1f7a4d; --kw: #7a3fd1; --str: #a8541a; --num: #1b6fb8; --com: #8a93a3;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
-  /* The dark palette applies when the OS asks for it, unless the theme toggle picked
-     light — and always when the toggle picked dark. The two blocks must stay identical:
-     CSS has no way to share one declaration block between a media query and a selector. */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #12151b; --panel: #1b1f27; --fg: #e3e6ec; --muted: #9098a8; --border: #2e3440;
-      --accent: #f06a84; --accent-fg: #fff; --err-bg: #3a1c22; --err: #ff8a9b;
-      --stmt-bg: #232834;
-      --ok: #5fd39b; --kw: #c49bff; --str: #f0a86b; --num: #6fb6ff; --com: #6b7384;
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #12151b; --panel: #1b1f27; --fg: #e3e6ec; --muted: #9098a8; --border: #2e3440;
-    --accent: #f06a84; --accent-fg: #fff; --err-bg: #3a1c22; --err: #ff8a9b;
-    --stmt-bg: #232834;
-    --ok: #5fd39b; --kw: #c49bff; --str: #f0a86b; --num: #6fb6ff; --com: #6b7384;
-    color-scheme: dark;
-  }
-  :root[data-theme="light"] { color-scheme: light; }
   * { box-sizing: border-box; }
   /* The page never scrolls: header, toolbar and editor stay put, and only the result
      pane scrolls. The editor's height is --editor-h, set by dragging the splitter. */
@@ -53,11 +29,13 @@
   header { display: flex; align-items: center; gap: 12px; padding: 10px 16px;
            border-bottom: 1px solid var(--border); background: var(--panel); flex-wrap: wrap; }
   header h1 { font-size: 16px; margin: 0; }
-  #status { color: var(--muted); font-size: 13px; }
+  /* Shrinks with an ellipsis rather than wrapping the header onto a second row. */
+  #status { color: var(--muted); font-size: 13px; flex: 1 1 120px; min-width: 0;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #status.bad { color: var(--err); }
   header .spacer { flex: 1; }
   #theme { width: 32px; height: 32px; padding: 0; font-size: 16px; line-height: 1; }
-  /* The tiering service control (streaming_lakehouse_oss only; hidden unless the backend
+  /* The tiering service control (hidden unless the backend
      reports a tiering JAR). A status dot, the job state, and Start or a link to the job. */
   #tiering { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted);
              padding: 3px 4px 3px 10px; border: 1px solid var(--border); border-radius: 6px;
@@ -70,8 +48,67 @@
   #tiering .tstate { color: var(--fg); }
   #tiering a { color: var(--accent); font-size: 12px; padding-right: 6px; }
   #tiering button { padding: 3px 10px; }
-  main { flex: 1; min-height: 0; width: 100%; padding: 12px 16px 16px;
+  #layout { flex: 1; min-height: 0; display: flex; position: relative; }
+  main { flex: 1; min-height: 0; min-width: 0; padding: 12px 16px 16px;
          display: flex; flex-direction: column; --editor-h: 300px; }
+  /* ── Catalog browser ── */
+  #catalogToggle { display: inline-flex; align-items: center; gap: 6px; }
+  #catalogToggle .icon { width: 16px; height: 16px; flex: none; }
+  #catalogToggle[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+  #catalog { flex: none; width: 290px; display: flex; flex-direction: column; min-height: 0;
+             background: var(--panel); border-right: 1px solid var(--border); }
+  #catalog[hidden] { display: none; }
+  .cat-head { display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 14px;
+              border-bottom: 1px solid var(--border); }
+  .cat-head .spacer { flex: 1; }
+  .cat-head button { width: 28px; height: 28px; padding: 0; color: var(--muted);
+                     display: inline-flex; align-items: center; justify-content: center; }
+  .cat-head button svg { width: 15px; height: 15px; }
+  .cat-head button:hover, .cat-head button:focus-visible { color: var(--fg); }
+  #catalogTree, #catalogTree ul { list-style: none; margin: 0; padding: 0; }
+  #catalogTree { flex: 1; overflow: auto; padding: 6px 0; font-size: 13px; }
+  #catalogTree ul { padding-left: 14px; }
+  .node { display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 10px;
+          cursor: pointer; white-space: nowrap; border-radius: 4px; margin: 0 4px; }
+  .node:hover { background: var(--stmt-bg); }
+  /* A node added by a refresh flashes once, so it is clear what the DDL changed. */
+  .node.fresh { animation: fresh 2s ease-out; }
+  @keyframes fresh { from { background: color-mix(in srgb, var(--ok) 32%, transparent); } }
+  .node:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .node .caret { flex: none; width: 10px; font-size: 9px; color: var(--muted); transition: transform .12s; }
+  li[aria-expanded="true"] > .node .caret { transform: rotate(90deg); }
+  .node .kind { flex: none; font: 600 9.5px/1 var(--mono); letter-spacing: .03em; padding: 3px 4px;
+                border-radius: 3px; color: var(--muted); border: 1px solid var(--border); min-width: 26px;
+                text-align: center; }
+  .node.catalog .kind { color: var(--kw); border-color: color-mix(in srgb, var(--kw) 40%, transparent); }
+  .node.database .kind { color: var(--num); border-color: color-mix(in srgb, var(--num) 40%, transparent); }
+  .node.table .kind { color: var(--type); border-color: color-mix(in srgb, var(--type) 40%, transparent); }
+  .node .name { overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 12.5px; }
+  .node.column { cursor: default; gap: 8px; padding-left: 26px; }
+  .node.column .name { color: var(--fg); flex: none; max-width: 60%; }
+  .node .type { color: var(--type); font-family: var(--mono); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+  .node .badge { flex: none; font-size: 10px; padding: 0 4px; border-radius: 3px;
+                 background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  /* The table actions float over the row's right end instead of joining its layout:
+     shown on hover, they would otherwise make the row taller and push the tree down. */
+  .node { position: relative; }
+  .node .actions { position: absolute; right: 4px; top: 0; bottom: 0; display: flex; align-items: center;
+                   gap: 4px; padding-left: 18px; visibility: hidden;
+                   background: linear-gradient(to right, transparent, var(--stmt-bg) 14px); border-radius: 0 4px 4px 0; }
+  .node:hover .actions, .node:focus-within .actions, .node.active .actions { visibility: visible; }
+  .node .actions button { font-size: 11px; line-height: 1.3; padding: 0 6px; color: var(--muted);
+                          background: var(--panel); }
+  .node .actions button:hover, .node .actions button:focus-visible { color: var(--fg); border-color: var(--muted); }
+  .cat-msg { padding: 3px 10px 3px 30px; color: var(--muted); font-size: 12px; }
+  .cat-msg.err { color: var(--err); white-space: normal; }
+  .cat-foot { margin: 0; padding: 8px 14px 10px; border-top: 1px solid var(--border);
+              color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+  .cat-foot code { font-size: 11px; }
+  /* Narrow screens: the panel floats over the editor instead of squeezing it. */
+  @media (max-width: 760px) {
+    #catalog { position: absolute; inset: 0 auto 0 0; z-index: 5; width: min(320px, 88vw);
+               box-shadow: 8px 0 32px rgba(0,0,0,.3); }
+  }
   .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; flex: none; }
   select, button { font: inherit; padding: 6px 10px; border-radius: 6px;
                    border: 1px solid var(--border); background: var(--panel); color: var(--fg); }
@@ -98,18 +135,23 @@
   .CodeMirror-gutters { background: var(--panel); border-right: 1px solid var(--border); }
   .CodeMirror-linenumber { color: var(--muted); }
   .CodeMirror-cursor { border-left-color: var(--fg); }
+  .CodeMirror pre.CodeMirror-placeholder { color: var(--muted); font-style: italic; }
   .CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected { background: color-mix(in srgb, var(--accent) 22%, transparent); }
-  .cm-keyword { color: var(--kw); font-weight: 600; } .cm-string { color: var(--str); }
-  .cm-number { color: var(--num); } .cm-comment { color: var(--com); font-style: italic; }
-  .cm-builtin, .cm-type { color: var(--num); } .cm-variable-2 { color: var(--fg); }
   #splitter { flex: none; height: 14px; cursor: row-resize; display: flex; align-items: center;
               justify-content: center; touch-action: none; user-select: none; outline: none; }
   #splitter::before { content: ""; width: 48px; height: 4px; border-radius: 2px; background: var(--border); }
   #splitter:hover::before, #splitter:focus-visible::before, #splitter.dragging::before { background: var(--accent); }
   body.resizing { cursor: row-resize; user-select: none; }
+  #resultsBar { flex: none; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+                font-size: 12px; color: var(--muted); }
+  #resultsBar[hidden] { display: none; }
+  #resultsBar .spacer { flex: 1; }
+  #resultsBar button { font-size: 12px; padding: 3px 10px; }
   #results { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+  /* The empty state fills the results pane, like a result panel would. */
   #results:empty::before { content: "Results appear here."; color: var(--muted); font-size: 13px;
-                           padding: 24px; text-align: center; border: 1px dashed var(--border); border-radius: 6px; }
+                           padding: 24px; border: 1px dashed var(--border); border-radius: 6px;
+                           flex: 1; display: flex; align-items: center; justify-content: center; }
   .out { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
          flex: none; display: flex; flex-direction: column; }
   /* The last statement's panel — usually the SELECT — takes the rest of the pane, and its
@@ -141,9 +183,17 @@
   .out .state { font-size: 12px; color: var(--muted); white-space: nowrap; }
   .out .state.live { color: var(--accent); } .out .state.done { color: var(--ok); }
   .out .state.fail { color: var(--err); }
+  /* Cancel sits on the running panel itself, next to its state. */
+  .out .stop { display: none; align-self: center; font-size: 12px; padding: 2px 10px; margin: -3px 0;
+               color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, var(--border)); }
+  .out.live .stop { display: inline-block; }
+  .out .stop:hover:not(:disabled) { background: var(--err-bg); }
   .out a { color: var(--accent); font-size: 12px; }
   .grid { overflow: auto; max-height: 120px; }
   .out.fill .grid { flex: 1; max-height: none; min-height: 0; }
+  /* With no rows yet, the grid is just its header: it must not stretch, or it pushes the
+     waiting indicator or "no rows" below the bottom of the panel. */
+  .out.fill .grid.no-rows { flex: none; }
   table { border-collapse: collapse; font-family: var(--mono); font-size: 12px; width: max-content; min-width: 100%; }
   th, td { padding: 4px 10px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
   th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 600; }
@@ -171,6 +221,41 @@
             border: 1px solid var(--border); border-radius: 8px; background: var(--panel);
             color: var(--fg); box-shadow: 0 12px 48px rgba(0,0,0,.35); }
   #viewer[open] { display: flex; flex-direction: column; }
+  /* ── The table structure dialog ── */
+  #structure { width: min(920px, calc(100vw - 32px)); max-height: min(86vh, 960px); padding: 0;
+               border: 1px solid var(--border); border-radius: 8px; background: var(--panel);
+               color: var(--fg); box-shadow: 0 12px 48px rgba(0,0,0,.35); }
+  #structure[open] { display: flex; flex-direction: column; }
+  #structure::backdrop { background: rgba(10, 12, 16, .55); }
+  #structure header { padding: 8px 12px; gap: 8px; flex-wrap: nowrap; }
+  #structure header h2 { font: 600 14px var(--mono); margin: 0; overflow: hidden; text-overflow: ellipsis;
+                         white-space: nowrap; min-width: 0; }
+  #structure header .kind { flex: none; font: 600 9.5px/1 var(--mono); padding: 3px 5px; border-radius: 3px;
+                            color: var(--type); border: 1px solid color-mix(in srgb, var(--type) 40%, transparent); }
+  #structure .sbody { overflow: auto; padding: 4px 16px 16px; min-height: 0; }
+  #structure h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+                  margin: 16px 0 6px; font-weight: 600; }
+  #structure .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  #structure .chip { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: var(--stmt-bg);
+                     border: 1px solid var(--border); white-space: nowrap; }
+  #structure .chip b { font-weight: 600; } #structure .chip code { font-size: 11.5px; }
+  #structure .chip.lake { border-color: color-mix(in srgb, var(--ok) 50%, transparent);
+                          background: color-mix(in srgb, var(--ok) 12%, transparent); }
+  #structure table { width: 100%; min-width: 0; }
+  #structure td, #structure th { white-space: nowrap; }
+  #structure td.num { color: var(--muted); width: 1%; text-align: right; }
+  #structure td.name { font-weight: 600; }
+  #structure td.type { color: var(--type); }
+  #structure td.notes { white-space: normal; color: var(--muted); font-family: system-ui, sans-serif; font-size: 12px; }
+  #structure td.opt-key { color: var(--str); width: 1%; }
+  #structure td.opt-val { white-space: pre-wrap; word-break: break-all; }
+  #structure .badge { font-size: 10px; padding: 0 5px; border-radius: 3px; margin-right: 4px;
+                      background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  #structure details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin: 16px 0 6px;
+                               text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  #structure details pre { margin: 0; padding: 10px 12px; background: var(--stmt-bg); border-radius: 6px;
+                           font: 12.5px/1.5 var(--mono); overflow: auto; white-space: pre; }
+  #structure .loading { display: flex; gap: 10px; align-items: center; padding: 24px 0; color: var(--muted); }
   #viewer::backdrop { background: rgba(10, 12, 16, .55); }
   #viewer header { padding: 8px 12px; gap: 8px; flex-wrap: nowrap; }
   #viewer header h2 { font-size: 14px; margin: 0; font-weight: 600; overflow: hidden;
@@ -189,6 +274,11 @@
 </head>
 <body>
 <header>
+  <button id="catalogToggle" type="button" aria-controls="catalog" aria-expanded="false"
+          title="Browse catalogs, databases and tables"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"
+    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/>
+    <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>Catalog</button>
   <h1>Flink SQL Editor</h1>
   <span id="status">connecting…</span>
   <span class="spacer"></span>
@@ -202,22 +292,53 @@
   <button id="newSession">New session</button>
   <button id="theme" type="button"></button>
 </header>
+<div id="layout">
+<!-- Catalog browser: catalogs > databases > tables > columns, listed with SHOW and
+     DESCRIBE in this page's own session (so its in-memory tables show up too). -->
+<aside id="catalog" hidden aria-label="Catalog browser">
+  <div class="cat-head">
+    <strong>Catalog</strong><span class="spacer"></span>
+    <button type="button" id="catalogExpand" title="Expand all: every catalog and database" aria-label="Expand all catalogs and databases"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5-5 5 5"/><path d="M7 14l5 5 5-5"/></svg></button>
+    <button type="button" id="catalogCollapse" title="Collapse all" aria-label="Collapse the whole tree"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5l5 5 5-5"/><path d="M7 19l5-5 5 5"/></svg></button>
+    <button type="button" id="catalogRefresh" title="Refresh" aria-label="Refresh the catalog tree">↻</button>
+    <button type="button" id="catalogClose" title="Close" aria-label="Close the catalog browser">✕</button>
+  </div>
+  <ul id="catalogTree" role="tree" aria-label="Catalogs"></ul>
+  <p class="cat-foot">Click a table for its columns; double-click it to insert its name.
+    <b>Info</b> shows its structure; <b>DDL</b> runs <code>SHOW CREATE TABLE</code>.</p>
+</aside>
 <main>
   <div class="toolbar">
     <select id="examples"><option value="">Examples: DDL files and explore.sql…</option></select>
     <button id="run" class="primary" disabled>Run</button>
-    <button id="cancel" disabled>Cancel</button>
-    <button id="clear" title="Clear the results">Clear results</button>
     <span class="info">
       <button type="button" aria-label="How running works" aria-describedby="runTip">i</button>
       <span class="tip" id="runTip" role="tooltip"><kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Enter</kbd> runs the selection, or everything.
         Statements run in order; a streaming SELECT runs until you cancel it.</span>
     </span>
   </div>
-  <div id="editorPane"><textarea id="sql">SHOW TABLES;</textarea></div>
+  <div id="editorPane"><textarea id="sql" placeholder="Write Flink SQL here, or pick one from the Examples menu. ⌘/Ctrl+Enter runs it."></textarea></div>
   <div id="splitter" role="separator" aria-orientation="horizontal" aria-label="Resize editor and results"
        tabindex="0" title="Drag to resize · double-click to reset"></div>
+  <!-- Above the result panels, only while there are some: what the last run did, and
+       Clear. Cancel lives on the running statement's own panel. -->
+  <div id="resultsBar" hidden>
+    <span id="resultsSummary"></span><span class="spacer"></span>
+    <button type="button" id="clear" title="Remove every result panel">Clear results</button>
+  </div>
   <div id="results"></div>
+<!-- One table's structure, opened from the catalog browser's Info button. -->
+<dialog id="structure" aria-labelledby="structTitle">
+  <header>
+    <span class="kind" id="structKind"></span>
+    <h2 id="structTitle"></h2>
+    <span class="spacer"></span>
+    <button type="button" id="structInsert" title="Insert the table's name at the editor cursor">Insert name</button>
+    <button type="button" id="structCopy" title="Copy the CREATE statement">Copy DDL</button>
+    <button type="button" id="structClose" aria-label="Close">✕</button>
+  </header>
+  <div class="sbody" id="structBody"></div>
+</dialog>
 <!-- Full-size viewer for one long value. A native <dialog>: Esc and the backdrop close
      it, and focus stays inside while it is open. -->
 <dialog id="viewer" aria-labelledby="viewerTitle">
@@ -231,60 +352,30 @@
   <pre id="viewerBody"></pre>
 </dialog>
 </main>
+</div>
 <script>
-const $ = id => document.getElementById(id);
 const MAX_ROWS = 1000;
 let session = null, busy = false, stopRequested = false, current = null;
 
-// The session and the editor text live in localStorage, so a reload, a closed tab or a
-// second tab gets back the same session — and with it every table the attendee created.
-// Wrapped because storage can be unavailable (private windows, blocked site data).
-const store = {
-  get: k => { try { return localStorage.getItem("sqlEditor." + k); } catch { return null; } },
-  set: (k, v) => { try { v === null ? localStorage.removeItem("sqlEditor." + k) : localStorage.setItem("sqlEditor." + k, v); } catch {} },
-};
-
 const editor = CodeMirror.fromTextArea($("sql"), {
-  mode: "text/x-sql", lineNumbers: true, indentUnit: 2, lineWrapping: false,
+  mode: "text/x-flinksql", lineNumbers: true, indentUnit: 2, lineWrapping: false,
   extraKeys: { "Cmd-Enter": () => runScript(), "Ctrl-Enter": () => runScript() },
 });
-// Light/dark toggle. Until it is first clicked the page follows the OS setting (live,
-// if the OS switches); a click pins the opposite of what is showing and remembers it.
-const darkQuery = matchMedia("(prefers-color-scheme: dark)");
-const isDark = () => (document.documentElement.dataset.theme || (darkQuery.matches ? "dark" : "light")) === "dark";
-function paintThemeButton() {
-  const next = isDark() ? "light" : "dark";
-  $("theme").textContent = isDark() ? "☀" : "☾";
-  $("theme").title = `Switch to ${next} mode`;
-  $("theme").setAttribute("aria-label", `Switch to ${next} mode`);
-}
-$("theme").onclick = () => {
-  const t = isDark() ? "light" : "dark";
-  document.documentElement.dataset.theme = t;
-  store.set("theme", t);
-  paintThemeButton();
-};
-darkQuery.addEventListener("change", paintThemeButton);
-paintThemeButton();
 
 if (store.get("sql") !== null) editor.setValue(store.get("sql"));
 let saveTimer;
 editor.on("change", () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => store.set("sql", editor.getValue()), 300); });
 
-async function api(path, body) {
-  const r = await fetch(path, {
-    method: body === undefined ? "GET" : "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const data = r.status === 204 ? {} : await r.json();
-  if (!r.ok) throw new Error(data.error || r.statusText);
-  return data;
-}
 
 function setStatus(text, bad) { $("status").textContent = text; $("status").className = bad ? "bad" : ""; }
 // Clear is off while a script runs: its panels are still being written to.
-function setBusy(b) { busy = b; $("run").disabled = b || !session; $("cancel").disabled = !b; $("newSession").disabled = b; $("clear").disabled = b; }
+function setBusy(b) { busy = b; $("run").disabled = b || !session; $("newSession").disabled = b; $("clear").disabled = b; }
+
+// The bar above the results: shown with the first panel, gone with the last.
+function resultsBar(summary) {
+  if (summary !== undefined) $("resultsSummary").textContent = summary;
+  $("resultsBar").hidden = !$("results").children.length;
+}
 
 async function openSession() {
   if (session) navigator.sendBeacon(`/api/close/${session}`);
@@ -295,6 +386,7 @@ async function openSession() {
     const s = await api("/api/session", { ddl });
     session = s.session; store.set("session", session);
     setStatus(`session ${session.slice(0, 8)} · ${s.ddl ? s.ddl + " DDL statements loaded" : "new, empty"}`);
+    catalogReload();
   } catch (e) { setStatus(e.message.split("\n")[0], true); }
   setBusy(false);
 }
@@ -308,9 +400,13 @@ async function resumeOrOpen() {
       session = saved;
       setStatus(`session ${session.slice(0, 8)} · reconnected — your tables and views are still there`);
       setBusy(false);
+      catalogReload();
       return;
     } catch { store.set("session", null); }
   }
+  // A new session (first visit, or the old one is gone — e.g. the environment was
+  // reset): start from an empty editor. The saved draft belonged to the old session.
+  editor.setValue(""); store.set("sql", null);
   await openSession();
 }
 
@@ -329,18 +425,10 @@ const looksLikeSql = t => /^\s*(CREATE|ALTER|SELECT|INSERT|WITH)\b/i.test(t);
 // Syntax-highlight SQL (a SHOW CREATE result, an EXPLAIN plan) with the editor's own
 // mode; anything else goes in as plain text. Either way whitespace is kept verbatim.
 function fillPre(pre, t) {
-  if (looksLikeSql(t)) CodeMirror.runMode(t, "text/x-sql", pre);
+  if (looksLikeSql(t)) CodeMirror.runMode(t, "text/x-flinksql", pre);
   else pre.textContent = t;
 }
 
-async function copyText(t, btn) {
-  try { await navigator.clipboard.writeText(t); }
-  catch {   // no clipboard API outside a secure context (e.g. a remote host over http)
-    const ta = Object.assign(document.createElement("textarea"), { value: t });
-    document.body.append(ta); ta.select(); document.execCommand("copy"); ta.remove();
-  }
-  const was = btn.textContent; btn.textContent = "Copied"; setTimeout(() => btn.textContent = was, 1200);
-}
 
 let viewerText = "";
 function openViewer(title, t) {
@@ -396,10 +484,12 @@ function renderDoc(p, t) {
 function newPanel(stmt) {
   const el = document.createElement("div");
   el.className = "out";
-  el.innerHTML = `<div class="head"><button class="toggle" type="button" aria-expanded="false" title="Show the full statement">▶</button><span class="stmt"></span><span class="job"></span><span class="state live">running…</span></div><pre class="full"></pre><div class="body"></div>`;
-  CodeMirror.runMode(stmt.replace(/\s+/g, " "), "text/x-sql", el.querySelector(".stmt"));
+  el.innerHTML = `<div class="head"><button class="toggle" type="button" aria-expanded="false" title="Show the full statement">▶</button><span class="stmt"></span><span class="job"></span><span class="state live">running…</span><button class="stop" type="button" title="Cancel this statement, and skip the ones after it">Cancel</button></div><pre class="full"></pre><div class="body"></div>`;
+  CodeMirror.runMode(stmt.replace(/\s+/g, " "), "text/x-flinksql", el.querySelector(".stmt"));
   // Comments were stripped by the splitter, which leaves blank lines where they were.
-  CodeMirror.runMode(stmt.replace(/\n\s*\n/g, "\n"), "text/x-sql", el.querySelector(".full"));
+  CodeMirror.runMode(stmt.replace(/\n\s*\n/g, "\n"), "text/x-flinksql", el.querySelector(".full"));
+  el.classList.add("live");
+  el.querySelector(".stop").onclick = e => { stopRequested = true; e.currentTarget.disabled = true; e.currentTarget.textContent = "Cancelling…"; };
   const toggle = el.querySelector(".toggle");
   const flip = () => {
     const open = el.classList.toggle("expanded");
@@ -411,11 +501,39 @@ function newPanel(stmt) {
   for (const other of $("results").children) other.classList.remove("fill");
   el.classList.add("fill");
   $("results").append(el);
+  resultsBar();
   el.scrollIntoView({ block: "nearest" });
-  const p = { el, columns: [], rows: [], changes: 0, stmtTitle: stmt.replace(/\s+/g, " ").trim() };
+  const p = { el, columns: [], rows: [], changes: 0, stmtTitle: stmt.replace(/\s+/g, " ").trim(),
+              live: true, jobId: null, started: Date.now() };
   p.state = (text, cls) => { const s = el.querySelector(".state"); s.textContent = text; s.className = "state " + cls;
-                              el.classList.toggle("done", cls === "done"); el.classList.toggle("fail", cls === "fail"); };
+                              el.classList.toggle("done", cls === "done"); el.classList.toggle("fail", cls === "fail");
+                              if (cls !== "live") { p.live = false; clearInterval(p.timer); p.waitEl.remove(); el.classList.remove("live"); } };
+  p.waitEl = waitingEl();
+  p.timer = setInterval(() => paintWaiting(p), 1000);
+  // Once faded in, stay visible: re-inserting the node would restart the delayed fade.
+  setTimeout(() => p.waitEl.classList.add("shown"), 700);
+  paintWaiting(p);
+  el.querySelector(".body").append(p.waitEl);
   return p;
+}
+
+function waitingEl() {
+  const w = document.createElement("div");
+  w.className = "waiting"; w.setAttribute("role", "status");
+  w.innerHTML = `<span class="spinner" aria-hidden="true"></span><div><span class="msg"></span><span class="elapsed"></span><div class="hint"></div></div>`;
+  return w;
+}
+
+// Before the gateway reports a job, the statement is still being planned and submitted;
+// after, the job runs but has not produced a row. A streaming read of a tiered table
+// sits in the second phase for up to a minute while Flink plans the Iceberg side.
+function paintWaiting(p) {
+  const secs = Math.floor((Date.now() - p.started) / 1000);
+  p.waitEl.querySelector(".msg").textContent = p.jobId ? "Flink job running — waiting for the first rows…" : "Running the statement…";
+  p.waitEl.querySelector(".elapsed").textContent = secs ? `${secs}s` : "";
+  p.waitEl.querySelector(".hint").textContent = p.jobId && secs >= 10
+    ? "A query on a tiered table plans its Iceberg side first, which can take up to a minute. A streaming query with nothing to show yet keeps waiting until Cancel."
+    : "";
 }
 
 // Apply the changelog the way the SQL client's table mode does: a retraction removes
@@ -436,7 +554,17 @@ function apply(p, rows) {
 
 function render(p) {
   const body = p.el.querySelector(".body");
-  if (!p.columns.length) { body.innerHTML = ""; return; }
+  // An empty page of results while still running changes nothing on screen: skip it, so
+  // the waiting indicator is not torn down and rebuilt on every poll.
+  const shape = `${p.live}|${p.rows.length}|${p.columns.join()}`;
+  if (p.live && !p.rows.length && p.shape === shape) return;
+  p.shape = shape;
+  if (!p.columns.length) {
+    // A result with no rows can arrive without its column names, too.
+    if (p.live) body.replaceChildren(p.waitEl);
+    else body.innerHTML = `<div class="empty">no rows</div>`;
+    return;
+  }
   if (p.columns.length === 1 && p.rows.length === 1 && p.rows[0][0] != null && isLong(text(p.rows[0][0]))) {
     body.replaceChildren(renderDoc(p, text(p.rows[0][0])));
     return;
@@ -446,9 +574,12 @@ function render(p) {
   for (const c of p.columns) { const th = document.createElement("th"); th.textContent = c; hr.appendChild(th); }
   const tb = table.createTBody();
   for (const row of p.rows) { const tr = tb.insertRow(); row.forEach((v, i) => tr.appendChild(cell(v, p.columns[i]))); }
-  const grid = document.createElement("div"); grid.className = "grid"; grid.appendChild(table);
+  const grid = document.createElement("div"); grid.className = p.rows.length ? "grid" : "grid no-rows"; grid.appendChild(table);
   body.replaceChildren(grid);
-  if (!p.rows.length) body.insertAdjacentHTML("beforeend", `<div class="empty">no rows yet</div>`);
+  if (!p.rows.length) {
+    if (p.live) body.append(p.waitEl);
+    else body.insertAdjacentHTML("beforeend", `<div class="empty">no rows</div>`);
+  }
 }
 
 function showError(p, msg) {
@@ -495,6 +626,7 @@ async function runOne(stmt) {
         return false;
       }
       const r = await api(`/api/result/${session}/${op}/${token}`);
+      if (r.jobId && !p.jobId) { p.jobId = r.jobId; paintWaiting(p); }
       if (r.jobId && !p.el.querySelector(".job a")) {
         p.el.querySelector(".job").innerHTML =
           `<a target="_blank" href="http://${location.hostname}:8081/#/job/running/${r.jobId}/overview">Flink job ${r.jobId.slice(0, 8)}</a>`;
@@ -511,25 +643,39 @@ async function runOne(stmt) {
     }
   } catch (e) { showError(p, e.message); return false; }
   finally { current = null; }
-  render(p);
   p.state(`done · ${p.rows.length} rows`, "done");
+  render(p);
   return true;
 }
 
-async function runScript() {
+async function runScript(sql) {
   if (busy || !session) return;
-  const text = editor.somethingSelected() ? editor.getSelection() : editor.getValue();
+  const text = typeof sql === "string" ? sql : editor.somethingSelected() ? editor.getSelection() : editor.getValue();
   const { statements } = await api("/api/split", { sql: text });
   if (!statements.length) return;
   $("results").replaceChildren();
   stopRequested = false; setBusy(true);
-  for (const s of statements) { if (!(await runOne(s))) break; }
+  const n = statements.length, of = n === 1 ? "" : ` of ${n}`;
+  // Taken before the script runs: the namespace its unqualified DDL names start from.
+  let before = null;
+  if (!$("catalog").hidden && needsCurrent(statements))
+    before = await api(`/api/catalog/${session}/current`).catch(() => null);
+  const succeeded = [];
+  for (const [i, s] of statements.entries()) {
+    resultsBar(n === 1 ? "running…" : `running statement ${i + 1} of ${n}…`);
+    if (!(await runOne(s))) break;
+    succeeded.push(s);
+  }
+  const k = succeeded.length;
+  resultsBar(k === n ? `${n} statement${n === 1 ? "" : "s"} · done`
+                     : stopRequested ? `cancelled at statement ${k + 1}${of}` : `stopped at statement ${k + 1}${of} — it failed`);
   setBusy(false);
+  // Refresh only the tree levels the successful CREATE / DROP / ALTERs touched.
+  catalogAfterDdl(succeeded, before);
 }
 
-$("run").onclick = runScript;
-$("cancel").onclick = () => { stopRequested = true; $("cancel").disabled = true; };
-$("clear").onclick = () => $("results").replaceChildren();
+$("run").onclick = () => runScript();
+$("clear").onclick = () => { $("results").replaceChildren(); resultsBar(""); };
 $("newSession").onclick = () => {
   if (session && !confirm("Start a new session? Everything created in this one (tables, views, models, SET options) is discarded.")) return;
   openSession();
@@ -581,11 +727,321 @@ function setEditorHeight(h, save) {
 }
 
 let examples = [];
-const GROUP_LABELS = {
-  DDL: "DDL — flink_sql/ddl/",
-  Queries: "Queries — flink_sql/explore.sql",
-  Jobs: "Jobs (INSERT INTO PostgreSQL) — flink_sql/jobs/",
+// Groups come from the backend in lab order (app.py, MENU); their names are the labels.
+const GROUP_LABELS = {};
+// ── Catalog browser ───────────────────────────────────────────────────────────
+
+// Backticks only where Flink needs them, so inserted names read like hand-written SQL.
+const quoteId = n => /^[A-Za-z_][A-Za-z0-9_]*$/.test(n) ? n : "`" + n.replace(/`/g, "``") + "`";
+const qualified = path => path.map(quoteId).join(".");
+const catalogOpen = new Set();   // expanded paths ("fluss", "fluss/orders", ...), kept across refreshes
+const LEVELS = ["catalog", "database", "table"];
+const KIND = { catalog: "CAT", database: "DB", table: "TBL" };
+
+function catalogQuery(path) {
+  const q = new URLSearchParams();
+  path.forEach((v, i) => q.set(LEVELS[i], v));
+  return `/api/catalog/${session}?${q}`;
+}
+
+function insertAtCursor(t) { editor.replaceSelection(t); editor.focus(); }
+
+function catalogMsg(text, err) {
+  const li = document.createElement("li"); li.className = "cat-msg" + (err ? " err" : "");
+  li.setAttribute("role", "none"); li.textContent = text; return li;
+}
+
+// One tree level under `ul`: path [] lists catalogs, [c] databases, [c, d] tables.
+async function catalogLoad(ul, path) {
+  ul.replaceChildren(catalogMsg("loading…"));
+  let items;
+  try { items = (await api(catalogQuery(path))).items; }
+  catch (e) {
+    const lines = e.message.split("\n").filter(l => l.startsWith("Caused by:"));
+    ul.replaceChildren(catalogMsg((lines.pop() || e.message.split("\n")[0]).replace(/^Caused by:\s*(\w+\.)*/, ""), true));
+    return;
+  }
+  ul.replaceChildren(...(items.length ? items.map(it => catalogNode(path.concat(it.name))) : [catalogMsg("empty")]));
+  // Re-open whatever was open before a refresh.
+  for (const li of ul.children) if (li.dataset.path && catalogOpen.has(li.dataset.path)) catalogToggle(li, true);
+}
+
+function catalogNode(path) {
+  const level = LEVELS[path.length - 1];
+  const li = document.createElement("li");
+  li.setAttribute("role", "treeitem"); li.setAttribute("aria-expanded", "false");
+  li.dataset.path = path.join("/");
+  const row = document.createElement("div");
+  row.className = "node " + level; row.tabIndex = 0;
+  row.innerHTML = `<span class="caret" aria-hidden="true">▶</span><span class="kind"></span><span class="name"></span>`;
+  row.querySelector(".kind").textContent = KIND[level];
+  row.querySelector(".name").textContent = path[path.length - 1];
+  row.title = qualified(path);
+  if (level === "table") {
+    const actions = document.createElement("span"); actions.className = "actions";
+    actions.innerHTML = `<button type="button" data-act="info" title="Show the table's structure">Info</button><button type="button" data-act="ddl" title="Run SHOW CREATE TABLE">DDL</button>`;
+    actions.onclick = e => {
+      e.stopPropagation();
+      const act = e.target.dataset.act;
+      if (act === "info") openStructure(path);
+      if (act === "ddl") runScript(`SHOW CREATE TABLE ${qualified(path)};`);
+    };
+    row.append(actions);
+    row.ondblclick = e => { e.preventDefault(); insertAtCursor(qualified(path)); };
+  }
+  row.onclick = () => catalogToggle(li);
+  row.onkeydown = e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); catalogToggle(li); }
+    else if (e.key === "ArrowRight" && li.getAttribute("aria-expanded") === "false") catalogToggle(li, true);
+    else if (e.key === "ArrowLeft" && li.getAttribute("aria-expanded") === "true") catalogToggle(li, false);
+  };
+  const ul = document.createElement("ul"); ul.setAttribute("role", "group"); ul.hidden = true;
+  li.append(row, ul);
+  return li;
+}
+
+async function catalogToggle(li, open) {
+  const ul = li.querySelector(":scope > ul");
+  open = open ?? li.getAttribute("aria-expanded") !== "true";
+  li.setAttribute("aria-expanded", open);
+  ul.hidden = !open;
+  const key = li.dataset.path, path = key.split("/");
+  if (!open) { catalogOpen.delete(key); return; }
+  catalogOpen.add(key);
+  return path.length < 3 ? catalogLoad(ul, path) : catalogColumns(ul, path, true);
+}
+
+// A table's columns, from DESCRIBE. `spinner` is off for a refresh, so the old columns
+// stay on screen until the new ones replace them.
+async function catalogColumns(ul, path, spinner) {
+  if (spinner) ul.replaceChildren(catalogMsg("loading…"));
+  try {
+    const cols = (await api(catalogQuery(path))).items;
+    ul.replaceChildren(...cols.map(c => {
+      const row = document.createElement("li"); row.setAttribute("role", "none");
+      row.innerHTML = `<div class="node column"><span class="name"></span><span class="type"></span></div>`;
+      const node = row.firstChild;
+      node.querySelector(".name").textContent = c.name;
+      // DESCRIBE marks time attributes inside the type ("TIMESTAMP(3) *ROWTIME*"): badges instead.
+      const attr = (c.type.match(/\*(ROWTIME|PROCTIME)\*/) || [])[1];
+      node.querySelector(".type").textContent = c.type.replace(/\s*\*(ROWTIME|PROCTIME)\*/, "") + (c.null === false ? " NOT NULL" : "");
+      node.querySelector(".type").title = c.type;
+      const badge = (label, title) => { const b = document.createElement("span"); b.className = "badge"; b.textContent = label; b.title = title; node.append(b); };
+      if (c.key) badge("PK", c.key);
+      if (attr === "PROCTIME") badge("PROCTIME", "Processing-time attribute");
+      if (c.watermark) badge("WM", "Event-time attribute · WATERMARK " + c.watermark);
+      if (c.extras) node.title = c.extras;
+      node.ondblclick = () => insertAtCursor(quoteId(c.name));
+      return row;
+    }));
+  } catch (e) { ul.replaceChildren(catalogMsg(e.message.split("\n")[0], true)); }
+}
+
+// Full rebuild: on a new or resumed session, or when the panel opens.
+function catalogReload() {
+  if ($("catalog").hidden) return;
+  if (!session) { $("catalogTree").replaceChildren(catalogMsg("no session")); return; }
+  catalogLoad($("catalogTree"), []);
+}
+
+const catalogLi = path => $("catalogTree").querySelector(`li[data-path="${CSS.escape(path.join("/"))}"]`);
+const isOpen = li => li?.getAttribute("aria-expanded") === "true";
+
+// Refresh ONE level in place: nodes that still exist are kept as they are, open
+// subtrees and all; new ones are added (and flash); dropped ones go. A level that is
+// not on screen is left alone: it is fetched fresh whenever it is next expanded.
+async function catalogRefreshLevel(path) {
+  const li = path.length ? catalogLi(path) : null;
+  if (path.length && !isOpen(li)) return;
+  const ul = li ? li.querySelector(":scope > ul") : $("catalogTree");
+  let items;
+  try { items = (await api(catalogQuery(path))).items; } catch { return; }   // keep what is shown
+  const have = new Map([...ul.children].filter(n => n.dataset.path).map(n => [n.dataset.path, n]));
+  const nodes = items.map(it => {
+    const key = path.concat(it.name).join("/");
+    if (have.has(key)) return have.get(key);
+    const n = catalogNode(path.concat(it.name));
+    n.firstChild.classList.add("fresh");
+    return n;
+  });
+  const keep = new Set(nodes.map(n => n.dataset.path));
+  for (const key of have.keys()) if (!keep.has(key))   // dropped: forget it and anything under it
+    for (const k of [...catalogOpen]) if (k === key || k.startsWith(key + "/")) catalogOpen.delete(k);
+  ul.replaceChildren(...(nodes.length ? nodes : [catalogMsg("empty")]));
+}
+
+async function catalogRefreshColumns(path) {
+  const li = catalogLi(path);
+  if (isOpen(li)) await catalogColumns(li.querySelector(":scope > ul"), path, false);
+}
+
+// The ↻ button: every level on screen, top down, in place.
+async function catalogRefreshAll() {
+  if ($("catalog").hidden || !session) return;
+  await catalogRefreshLevel([]);
+  for (let depth = 1; depth <= 3; depth++) {
+    const open = [...$("catalogTree").querySelectorAll('li[aria-expanded="true"]')]
+      .map(li => li.dataset.path.split("/")).filter(p => p.length === depth);
+    await Promise.all(open.map(p => depth < 3 ? catalogRefreshLevel(p) : catalogRefreshColumns(p)));
+  }
+}
+
+// What a DDL statement changed. Its object name has 1-3 parts, plain or `quoted`.
+const IDENT = "(?:`(?:[^`]|``)*`|[A-Za-z_$][\\w$]*)";
+const DDL_RE = new RegExp(
+  "^\\s*(create|drop|alter)\\s+(?:or\\s+replace\\s+)?(?:temporary\\s+)?(?:system\\s+)?" +
+  "(catalog|database|table|view|function)\\s+(?:if\\s+(?:not\\s+)?exists\\s+)?" +
+  `(${IDENT}(?:\\s*\\.\\s*${IDENT}){0,2})`, "i");
+const nameParts = q => [...q.matchAll(new RegExp(IDENT, "g"))]
+  .map(m => m[0].startsWith("`") ? m[0].slice(1, -1).replace(/``/g, "`") : m[0]);
+
+// Does resolving this script's DDL need the session's current catalog and database?
+// Only when it USEs or names an object without its full catalog.database prefix.
+function needsCurrent(statements) {
+  return statements.some(stmt => {
+    if (/^\s*use\b/i.test(stmt)) return true;
+    const m = stmt.match(DDL_RE);
+    if (!m) return false;
+    const k = m[2].toLowerCase(), n = nameParts(m[3]).length;
+    return (k === "database" && n < 2) || ((k === "table" || k === "view") && n < 3);
+  });
+}
+
+// After a script: refresh just the levels its successful DDL touched. Unqualified names
+// resolve against `cur`, the session's current catalog and database from BEFORE the
+// script ran, moved along by the script's own USE statements as they come.
+async function catalogAfterDdl(statements, cur) {
+  if ($("catalog").hidden || !session) return;
+  if (!statements.some(s => /^\s*(create|drop|alter)\b/i.test(s))) return;
+  cur = cur && { ...cur };
+  const levels = new Map(), columns = new Map();
+  for (const stmt of statements) {
+    const use = stmt.match(new RegExp(`^\\s*use\\s+(catalog\\s+)?(${IDENT}(?:\\s*\\.\\s*${IDENT})?)\\s*$`, "i"));
+    if (use) {
+      const parts = nameParts(use[2]);
+      if (!cur) continue;
+      if (use[1]) cur = { catalog: parts[0], database: null };   // that catalog's default database: unknown here
+      else if (parts.length === 2) cur = { catalog: parts[0], database: parts[1] };
+      else cur = { ...cur, database: parts[0] };
+      continue;
+    }
+    if (!/^\s*(create|drop|alter)\b/i.test(stmt)) continue;
+    const m = stmt.match(DDL_RE);
+    if (!m) return catalogRefreshAll();            // a DDL we do not parse: refresh what is shown
+    const [, verb, kind, name] = m, parts = nameParts(name), k = kind.toLowerCase();
+    if (k === "function") continue;                // functions are not in the tree
+    if (k === "catalog") { levels.set("", []); continue; }
+    const full = k === "database"
+      ? (parts.length === 2 ? parts : [cur?.catalog, ...parts])
+      : parts.length === 3 ? parts
+      : parts.length === 2 ? [cur?.catalog, ...parts]
+      : [cur?.catalog, cur?.database, ...parts];
+    if (full.some(x => !x)) return catalogRefreshAll();   // could not resolve the name
+    if (k === "database") { levels.set(full[0], [full[0]]); continue; }
+    const db = full.slice(0, 2);
+    levels.set(db.join("/"), db);
+    if (verb.toLowerCase() === "alter") columns.set(full.join("/"), full);   // columns may have changed
+  }
+  // Shallow levels first: a refreshed catalog list may add the node a deeper one needs.
+  for (const path of [...levels.values()].sort((a, b) => a.length - b.length)) await catalogRefreshLevel(path);
+  await Promise.all([...columns.values()].map(catalogRefreshColumns));
+}
+
+function catalogShow(show) {
+  $("catalog").hidden = !show;
+  $("catalogToggle").setAttribute("aria-expanded", show);
+  store.set("catalog", show ? "1" : null);
+  if (show) catalogReload();
+}
+// ── The structure dialog ──
+
+// The WITH ( 'k' = 'v', ... ) options of a CREATE statement, in order.
+function ddlOptions(ddl) {
+  const i = ddl.search(/\)\s*WITH\s*\(/i);
+  if (i < 0) return [];
+  return [...ddl.slice(i).matchAll(/'((?:[^']|'')*)'\s*=\s*'((?:[^']|'')*)'/g)]
+    .map(m => [m[1].replace(/''/g, "'"), m[2].replace(/''/g, "'")]);
+}
+
+let structPath = null, structDdl = "";
+
+async function openStructure(path) {
+  structPath = path; structDdl = "";
+  const d = $("structure");
+  $("structTitle").textContent = qualified(path);
+  $("structKind").textContent = "TBL";
+  $("structBody").innerHTML = `<div class="loading"><span class="spinner" aria-hidden="true"></span>Reading the table's structure…</div>`;
+  if (!d.open) d.showModal();
+  const q = new URLSearchParams({ catalog: path[0], database: path[1], table: path[2] });
+  let s;
+  try { s = await api(`/api/catalog/${session}/structure?${q}`); }
+  catch (e) {
+    const cause = e.message.split("\n").filter(l => l.startsWith("Caused by:")).pop();
+    $("structBody").innerHTML = `<div class="error"></div>`;
+    $("structBody").firstChild.textContent = (cause || e.message.split("\n")[0]).replace(/^Caused by:\s*(\w+\.)*/, "");
+    return;
+  }
+  if (structPath !== path) return;   // another table was opened meanwhile
+  structDdl = s.ddl || "";
+  $("structKind").textContent = s.kind === "view" ? "VIEW" : "TBL";
+  const opts = ddlOptions(structDdl), opt = Object.fromEntries(opts);
+  const pk = s.columns.find(c => c.key)?.key?.replace(/^PRI\((.*)\)$/, "$1");
+  const wm = s.columns.filter(c => c.watermark);
+  const chip = (html, cls = "") => `<span class="chip ${cls}">${html}</span>`;
+  const esc = t => String(t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+  const chips = [chip(`<b>${s.columns.length}</b> column${s.columns.length === 1 ? "" : "s"}`)];
+  if (pk) chips.push(chip(`primary key <code>${esc(pk)}</code>`));
+  for (const c of wm) chips.push(chip(`watermark <code>${esc(c.watermark)}</code>`));
+  if (opt.connector) chips.push(chip(`connector <code>${esc(opt.connector)}</code>`));
+  if (opt["table.datalake.enabled"] === "true")
+    chips.push(chip(`tiered to <b>${esc(opt["table.datalake.format"] || "the lake")}</b>` +
+                    (opt["table.datalake.freshness"] ? ` · freshness ${esc(opt["table.datalake.freshness"])}` : ""), "lake"));
+  if (opt["table.merge-engine"]) chips.push(chip(`merge engine <code>${esc(opt["table.merge-engine"])}</code>`));
+  const rows = s.columns.map((c, i) => {
+    const attr = (c.type.match(/\*(ROWTIME|PROCTIME)\*/) || [])[1];
+    const notes = [c.watermark && `event time · WATERMARK ${c.watermark}`, attr === "PROCTIME" && "processing time", c.extras]
+      .filter(Boolean).map(esc).join(" · ");
+    return `<tr><td class="num">${i + 1}</td><td class="name">${esc(c.name)}</td>` +
+      `<td class="type">${esc(c.type.replace(/\s*\*(ROWTIME|PROCTIME)\*/, ""))}</td>` +
+      `<td>${c.null ? "" : "NOT NULL"}</td>` +
+      `<td>${c.key ? '<span class="badge">PK</span>' : ""}${c.watermark ? '<span class="badge">WM</span>' : ""}</td>` +
+      `<td class="notes">${notes}</td></tr>`;
+  }).join("");
+  $("structBody").innerHTML =
+    `<div class="chips">${chips.join("")}</div>` +
+    `<h3>Columns</h3><table><thead><tr><th>#</th><th>Name</th><th>Type</th><th>Null</th><th>Key</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>` +
+    (opts.length ? `<h3>Options</h3><table><tbody>${opts.map(([k, v]) =>
+      `<tr><td class="opt-key">${esc(k)}</td><td class="opt-val">${esc(v)}</td></tr>`).join("")}</tbody></table>` : "") +
+    (structDdl ? `<details><summary>CREATE statement</summary><pre class="ddl"></pre></details>` : "");
+  const pre = $("structBody").querySelector("pre.ddl");
+  if (pre) CodeMirror.runMode(structDdl, "text/x-flinksql", pre);
+}
+$("structClose").onclick = () => $("structure").close();
+$("structure").addEventListener("click", e => { if (e.target === $("structure")) $("structure").close(); });   // backdrop
+$("structInsert").onclick = () => { $("structure").close(); insertAtCursor(qualified(structPath)); };
+$("structCopy").onclick = () => structDdl && copyText(structDdl, $("structCopy"));
+
+$("catalogToggle").onclick = () => catalogShow($("catalog").hidden);
+$("catalogClose").onclick = () => catalogShow(false);
+$("catalogRefresh").onclick = catalogRefreshAll;
+
+// Expand all: every catalog, then every database in them, level by level, so all tables
+// are listed. Not the tables themselves: that would be one DESCRIBE per table.
+$("catalogExpand").onclick = async () => {
+  if (!session) return;
+  const closed = depth => [...$("catalogTree").querySelectorAll('li[role="treeitem"]')]
+    .filter(li => li.dataset.path.split("/").length === depth && !isOpen(li));
+  for (const depth of [1, 2]) await Promise.all(closed(depth).map(li => catalogToggle(li, true)));
 };
+$("catalogCollapse").onclick = () => {
+  for (const li of $("catalogTree").querySelectorAll('li[aria-expanded="true"]')) {
+    li.setAttribute("aria-expanded", "false");
+    li.querySelector(":scope > ul").hidden = true;
+  }
+  catalogOpen.clear();
+};
+if (store.get("catalog") === "1") catalogShow(true);
+
 Promise.all([api("/api/examples"), api("/api/config")]).then(([list, cfg]) => {
   examples = list;
   const groups = {};
@@ -602,7 +1058,7 @@ Promise.all([api("/api/examples"), api("/api/config")]).then(([list, cfg]) => {
   resumeOrOpen();
 });
 
-// ── Tiering service (Lab 3, Step 11) ──────────────────────────────────────────
+// ── Tiering service (Lab 3, Step 12) ──────────────────────────────────────────
 // Deployed ahead of time (the JAR is uploaded to the JobManager) and started from here
 // with one click. The state comes from the JobManager, so a job started from a terminal
 // or the Flink Web UI shows up here too.

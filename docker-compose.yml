@@ -1,8 +1,8 @@
 name: streaming-lakehouse-oss
 
 # Streaming lakehouse on open source: Apache Flink + Apache Fluss + Apache Iceberg, all in
-# Docker Compose. The open-source edition of ../streaming_lakehouse, which runs the same
-# labs on Ververica Platform.
+# Docker Compose. The open-source edition of the Ververica Platform streaming lakehouse
+# workshop: the same labs, without the platform.
 #
 #   orders_log (Kafka) ─► Fluss log table ─► lookup join ◄─ Fluss PK table ◄─ Postgres CDC
 #                                                │
@@ -212,9 +212,9 @@ services:
 
   # ── Object storage + the Iceberg REST catalog ────────────────────────────────
   #
-  # Same stack as ../lakehouse_oss: the `pgsty/minio` community fork (upstream MinIO no
-  # longer publishes pullable images, and its later consoles dropped the object browser),
-  # and Lakekeeper with its metadata in its own PostgreSQL.
+  # The `pgsty/minio` community fork (upstream MinIO no longer publishes pullable images,
+  # and its later consoles dropped the object browser), and Lakekeeper with its metadata
+  # in its own PostgreSQL.
 
   minio:
     image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
@@ -379,8 +379,9 @@ services:
       start_period: 20s
 
   # The Trino connection is pre-created through conf/initial-data-sources.conf, which the
-  # image reads when it initialises a fresh workspace — see ../lakehouse_oss for why that
-  # path and not workspace/GlobalConfiguration/.dbeaver/data-sources.json.
+  # image reads only when it initialises a fresh workspace. Not
+  # workspace/GlobalConfiguration/.dbeaver/data-sources.json: the workspace volume would
+  # hide a file mounted there.
   cloudbeaver:
     image: dbeaver/cloudbeaver:26.2.1
     hostname: cloudbeaver
@@ -696,7 +697,7 @@ services:
   # PRELOAD_DDL=true runs flink_sql/ddl/*.sql into each new session first, like
   # `sql-client.sh -i`. Off by default, because attendees issue the DDL themselves.
   #
-  # It also owns the tiering service's "deploy, then Start" flow (Lab 3, Step 11): it
+  # It also owns the tiering service's "deploy, then Start" flow (Lab 3, Step 12): it
   # uploads the tiering JAR to the JobManager — which lists it under Submit New Job — and
   # its header's Start button runs that JAR with tiering.args, over Flink's REST API.
   sql-editor:
@@ -770,6 +771,8 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      # Grafana opens on the provisioned Order Analytics dashboard instead of its welcome page.
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/order_analytics.json
     ports:
       - "3000:3000"
     volumes:

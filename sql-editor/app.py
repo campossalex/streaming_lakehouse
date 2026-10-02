@@ -1,4 +1,4 @@
-"""Web SQL editor for the streaming_lakehouse_oss scenario.
+"""Web SQL editor for the streaming lakehouse workshop.
 
 A thin proxy in front of the Flink SQL Gateway. The browser cannot call the gateway
 directly (it sends no CORS headers), and a gateway session starts as empty as a bare
@@ -13,14 +13,20 @@ not — its registration is kept by the shared CatalogStore, and its tables by F
   - builds the examples menu from flink_sql/: the DDL files, the explore.sql sections,
     and the job files.
 
-This scenario has no secrets, so unlike coffee_shop_oss's copy of this app there is no
-placeholder substitution and nothing to redact: statements reach the gateway verbatim.
+This workshop has no secrets, so there is no placeholder substitution and nothing to
+redact: statements reach the gateway verbatim.
 """
 import glob
+import hashlib
+import hmac
 import json
 import os
 import re
+import threading
 import time
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
+from urllib.parse import quote, urlparse
 
 import requests
 from flask import Flask, Response, jsonify, request, send_from_directory
@@ -31,6 +37,11 @@ PRELOAD_DDL = os.environ.get("PRELOAD_DDL", "false").lower() in ("1", "true", "y
 FLINK = os.environ.get("FLINK_URL", "http://jobmanager:8081").rstrip("/")
 TIERING_JAR_DIR = os.environ.get("TIERING_JAR_DIR", "/opt/tiering")
 TIERING_ARGS = os.environ.get("TIERING_ARGS", "/opt/tiering.args")
+LAKEKEEPER = os.environ.get("LAKEKEEPER_URL", "http://lakekeeper:8181").rstrip("/")
+S3_ENDPOINT = os.environ.get("S3_ENDPOINT", "http://minio:9000").rstrip("/")
+S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY", "admin")
+S3_SECRET_KEY = os.environ.get("S3_SECRET_KEY", "password")
+S3_REGION = os.environ.get("S3_REGION", "us-east-1")
 
 app = Flask(__name__, static_folder="static")
 
@@ -109,41 +120,119 @@ RESET 'pipeline.name';
 """
 
 
+# The examples menu, in WORKSHOP.md's order — the same order as the pipeline page: each
+# lab's tables, sources, jobs and queries together, labelled with their step. Entries
+# point into the SQL files by section title, so the SQL itself lives in one place.
+#   ("ddl", file, section prefix)  a section of a ddl/ file
+#   ("file", path)                 a whole file
+#   ("job", file)                  a jobs/ file, plus a RESET of its pipeline.name
+#   ("explore", section prefix)    a section of explore.sql
+#   ("note", sql)                  guidance with nothing to run
+MENU = [
+    ("Lab 1 · Kafka → Fluss", [
+        ("Step 1 · the Fluss catalog", ("ddl", "01_fluss.sql", "Step 1:")),
+        ("Step 2 · database + orders_log", ("ddl", "01_fluss.sql", "Step 2:")),
+        ("Step 3 · the Kafka source table", ("ddl", "02_sources.sql", "Step 3:")),
+        ("Step 4 · job: kafka-to-fluss", ("job", "10_kafka_to_fluss.sql")),
+        ("Step 5 · events landing in Fluss", ("explore", "Lab 1, Step 5: events landing")),
+        ("Step 5 · the demo order's history", ("explore", "Lab 1, Step 5: the demo order")),
+    ]),
+    ("Lab 2 · Product enrichment", [
+        ("Step 6 · product_lookup (PK table)", ("ddl", "01_fluss.sql", "Step 6:")),
+        ("Step 7 · the postgres-cdc source table", ("ddl", "02_sources.sql", "Step 7:")),
+        ("Step 8 · job: pgcdc-to-fluss", ("job", "20_pgcdc_to_fluss.sql")),
+        ("Step 8 · products replicated", ("explore", "Lab 2, Step 8:")),
+        ("Step 9 · orders_enriched (Log table)", ("ddl", "01_fluss.sql", "Step 9:")),
+        ("Step 10 · job: product-enrichment", ("job", "30_enrichment.sql")),
+        ("Step 10 · enriched events", ("explore", "Lab 2, Step 10:")),
+    ]),
+    ("Lab 3 · Tiering to Iceberg", [
+        ("Step 11 · enable tiering", ("explore", "Lab 3, Step 11:")),
+        ("Step 11 · what the ALTER changed", ("explore", "Lab 3: what the ALTER changed")),
+        ("Step 12 · start the tiering service", ("note",
+            "-- Step 12: start the Fluss Datalake Tiering Service.\n"
+            "-- It is a JAR, not SQL: click Start next to \"Tiering service\" in this editor's\n"
+            "-- header. From a terminal instead:  docker compose exec jobmanager /opt/tiering.sh\n")),
+    ]),
+    ("Lab 4 · Querying the lakehouse", [
+        ("Step 15 · one table, two tiers", ("explore", "Lab 4, Step 15: one table")),
+        ("Step 15 · a streaming union read", ("explore", "Lab 4, Step 15: a streaming")),
+        ("Step 18 · Iceberg snapshots, seen from Flink", ("explore", "Lab 4, Step 18:")),
+        ("Step 18 bonus · Iceberg's own catalog in Flink", ("explore", "Bonus: Iceberg's own catalog")),
+        ("Step 18 bonus · time travel through the Iceberg catalog", ("explore", "Bonus: time travel")),
+    ]),
+    ("Lab 5 · Revenue to Grafana", [
+        ("Step 19 · the postgres catalog", ("file", "ddl/03_postgres.sql")),
+        ("Step 19 · job: revenue-analytics-sink", ("job", "50_revenue.sql")),
+    ]),
+    ("Bonus track · order_status", [
+        ("Step 21 · order_status (PK table)", ("ddl", "01_fluss.sql", "Bonus Step 21:")),
+        ("Step 22 · job: order-status-sync", ("job", "40_order_status.sql")),
+        ("Step 23 · tier the PK table as well", ("explore", "Bonus, Step 23:")),
+        ("Bonus · the current state of every order", ("explore", "Bonus: the current state")),
+    ]),
+]
+
+
+def job_example(name):
+    sql = read_sql(os.path.join("jobs", name))
+    return sql.rstrip() + "\n" + (RESET_NAME if PIPELINE_NAME.search(sql) else "")
+
+
 def load_examples():
-    """The DDL files as written, then explore.sql cut at its `-- ------ title` banners,
-    then the job files, each a long-running INSERT INTO."""
-    examples = []
-    for path in ddl_files():
-        with open(path) as f:
-            examples.append({"group": "DDL", "title": os.path.basename(path), "sql": f.read()})
-    examples += load_explore()
+    """The examples menu: MENU in lab order, then the complete DDL files. A job or an
+    explore.sql section MENU does not list lands in "Other", so none goes missing."""
+    explore = load_sections(os.path.join(SQL_DIR, "explore.sql"))
+    used_explore, used_jobs, examples = set(), set(), []
+    for group, items in MENU:
+        for title, ref in items:
+            kind = ref[0]
+            if kind == "ddl":
+                body = next(b for t, b in load_sections(os.path.join(SQL_DIR, "ddl", ref[1])) if t.startswith(ref[2]))
+            elif kind == "file":
+                body = read_sql(ref[1])
+            elif kind == "job":
+                body = job_example(ref[1]); used_jobs.add(ref[1])
+            elif kind == "explore":
+                t, body = next((t, b) for t, b in explore if t.startswith(ref[1])); used_explore.add(t)
+            else:
+                body = ref[1]
+            examples.append({"group": group, "title": title, "sql": body})
+    for t, b in explore:
+        if t not in used_explore:
+            examples.append({"group": "Other", "title": t, "sql": b})
     for path in sorted(glob.glob(os.path.join(SQL_DIR, "jobs", "*.sql"))):
+        if os.path.basename(path) not in used_jobs:
+            examples.append({"group": "Other", "title": os.path.basename(path), "sql": job_example(os.path.basename(path))})
+    for path in ddl_files():   # all of a file at once, for loading everything in one run
         with open(path) as f:
-            sql = f.read()
-        m = PIPELINE_NAME.search(sql)
-        title = os.path.basename(path) + (f" — {m.group(1)}" if m else "")
-        examples.append({"group": "Jobs", "title": title,
-                         "sql": sql.rstrip() + "\n" + (RESET_NAME if m else "")})
+            examples.append({"group": "Complete DDL files", "title": os.path.basename(path), "sql": f.read()})
     return examples
 
 
-def load_explore():
-    path = os.path.join(SQL_DIR, "explore.sql")
+def load_sections(path):
+    """A SQL file cut at its `-- ------ title` banners: [(title, body), ...]. Whatever
+    comes before the first banner (the file's header) is dropped."""
     if not os.path.isfile(path):
         return []
-    examples, title, body = [], None, []
+    sections, title, body = [], None, []
     with open(path) as f:
         for line in f:
             m = BANNER.match(line)
             if m:
                 if title:
-                    examples.append({"group": "Queries", "title": title, "sql": "".join(body).strip() + "\n"})
+                    sections.append((title, "".join(body).strip() + "\n"))
                 title, body = m.group(1), []
             elif title:
                 body.append(line)
     if title:
-        examples.append({"group": "Queries", "title": title, "sql": "".join(body).strip() + "\n"})
-    return examples
+        sections.append((title, "".join(body).strip() + "\n"))
+    return sections
+
+
+def load_explore():
+    return [{"group": "Queries", "title": t, "sql": b}
+            for t, b in load_sections(os.path.join(SQL_DIR, "explore.sql"))]
 
 
 # ── Gateway access ────────────────────────────────────────────────────────────
@@ -197,6 +286,11 @@ def json_error(e, status=502):
 @app.route("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
+
+
+@app.route("/pipeline")
+def pipeline_page():
+    return send_from_directory(app.static_folder, "pipeline.html")
 
 
 @app.get("/api/config")
@@ -385,6 +479,437 @@ def close(session):
     except (GatewayError, requests.RequestException):
         pass  # already gone (idle timeout) — nothing to do
     return Response(status=204)
+
+
+# ── Catalog browser ───────────────────────────────────────────────────────────
+#
+# Runs SHOW / DESCRIBE in the browser's own session, so the tree also shows that
+# session's in-memory tables (orders_log_kafka, ...), which no other session can see.
+
+def query_rows(session, sql, timeout=60):
+    """Run one statement and return every row's fields. For bounded statements only."""
+    op = gw("POST", f"/v1/sessions/{session}/statements", {"statement": sql})["operationHandle"]
+    path, rows, columns, deadline = result_path(session, op), [], [], time.time() + timeout
+    try:
+        while path:
+            res = gw("GET", path)
+            if res.get("resultType") == "EOS":
+                break
+            if time.time() > deadline:
+                raise GatewayError(f"timed out after {timeout}s: {sql}")
+            results = res.get("results") or {}
+            columns = [c["name"] for c in results.get("columns", [])] or columns
+            rows += [r["fields"] for r in results.get("data", [])]
+            if res.get("resultType") == "NOT_READY":
+                time.sleep(0.2)
+            path = res.get("nextResultUri")
+    finally:
+        gw("DELETE", f"/v1/sessions/{session}/operations/{op}/close")
+    return columns, rows
+
+
+def ident(*parts):
+    return ".".join("`" + p.replace("`", "``") + "`" for p in parts)
+
+
+@app.get("/api/catalog/<session>/current")
+def catalog_current(session):
+    """The session's current catalog and database: what an unqualified name in a DDL
+    statement resolves against, so the browser knows which tree level it changed."""
+    try:
+        _, c = query_rows(session, "SHOW CURRENT CATALOG")
+        _, d = query_rows(session, "SHOW CURRENT DATABASE")
+    except (GatewayError, requests.RequestException) as e:
+        return json_error(e)
+    return jsonify({"catalog": c[0][0], "database": d[0][0]})
+
+
+@app.get("/api/catalog/<session>/structure")
+def catalog_structure(session):
+    """One table's columns (DESCRIBE) and its DDL (SHOW CREATE), for the structure
+    dialog. SHOW CREATE TABLE refuses a view, so a view falls back to SHOW CREATE VIEW."""
+    c, d, t = (request.args.get(k) for k in ("catalog", "database", "table"))
+    if not (c and d and t):
+        return json_error("catalog, database and table are required", 400)
+    try:
+        names, rows = query_rows(session, f"DESCRIBE {ident(c, d, t)}")
+        kind, ddl = "table", None
+        try:
+            _, out = query_rows(session, f"SHOW CREATE TABLE {ident(c, d, t)}")
+        except GatewayError:
+            kind = "view"
+            _, out = query_rows(session, f"SHOW CREATE VIEW {ident(c, d, t)}")
+        ddl = out[0][0] if out else None
+    except (GatewayError, requests.RequestException) as e:
+        return json_error(e)
+    return jsonify({"kind": kind, "columns": [dict(zip(names, r)) for r in rows], "ddl": ddl})
+
+
+@app.get("/api/catalog/<session>")
+def catalog(session):
+    """No arguments: the catalogs. ?catalog=: its databases. + &database=: its tables and
+    views. + &table=: that table's columns, as DESCRIBE reports them."""
+    c, d, t = (request.args.get(k) for k in ("catalog", "database", "table"))
+    try:
+        if not c:
+            _, rows = query_rows(session, "SHOW CATALOGS")
+            return jsonify({"items": [{"name": r[0]} for r in rows]})
+        if not d:
+            _, rows = query_rows(session, f"SHOW DATABASES IN {ident(c)}")
+            return jsonify({"items": [{"name": r[0]} for r in rows]})
+        if not t:
+            # Views included: SHOW TABLES lists both. (SHOW VIEWS has no IN clause in
+            # Flink 1.20, and USE would change the session's current database.)
+            _, rows = query_rows(session, f"SHOW TABLES IN {ident(c, d)}")
+            return jsonify({"items": sorted(({"name": r[0]} for r in rows), key=lambda i: i["name"])})
+        columns, rows = query_rows(session, f"DESCRIBE {ident(c, d, t)}")
+        return jsonify({"items": [dict(zip(columns, r)) for r in rows]})
+    except (GatewayError, requests.RequestException) as e:
+        return json_error(e)
+
+
+# ── Pipeline page (static/pipeline.html) ─────────────────────────────────────
+#
+# The architecture diagram as a control surface: each box is a table (a source or a
+# sink), each arrow the Flink job that writes it. The page asks /api/pipeline/status what
+# exists and what runs, and runs every action's SQL in the browser's own session, like
+# the editor — the two share one session.
+
+# Box -> its table, and the arrow (job) that feeds it. `listed` is the name SHOW TABLES
+# prints when it differs from the table's own (the JDBC catalog qualifies the schema).
+NODES = {
+    "kafka":           {"table": ("default_catalog", "default_database", "orders_log_kafka"), "source": True},
+    "product_catalog": {"table": ("default_catalog", "default_database", "product_catalog_cdc"), "source": True},
+    "orders_log":      {"table": ("fluss", "orders", "orders_log"), "feed": "kafka_to_fluss"},
+    "product_lookup":  {"table": ("fluss", "orders", "product_lookup"), "feed": "pgcdc_to_fluss"},
+    "orders_enriched": {"table": ("fluss", "orders", "orders_enriched"), "feed": "enrichment"},
+    "revenue_5m":      {"table": ("postgres", "orders", "revenue_5m"), "listed": "public.revenue_5m",
+                        "feed": "revenue", "precreated": True},
+}
+EDGES = {
+    "kafka_to_fluss": {"from": ["kafka"], "to": "orders_log", "file": "jobs/10_kafka_to_fluss.sql"},
+    "pgcdc_to_fluss": {"from": ["product_catalog"], "to": "product_lookup", "file": "jobs/20_pgcdc_to_fluss.sql"},
+    "enrichment":     {"from": ["orders_log", "product_lookup"], "to": "orders_enriched", "file": "jobs/30_enrichment.sql"},
+    "revenue":        {"from": ["orders_enriched"], "to": "revenue_5m", "file": "jobs/50_revenue.sql"},
+}
+# Pre-created on page load: revenue_5m already exists in PostgreSQL, so Flink only needs
+# the postgres catalog. The two sources are not: attendees create them from their boxes.
+BOOTSTRAP_FILES = ["ddl/03_postgres.sql"]
+
+
+def read_sql(rel):
+    with open(os.path.join(SQL_DIR, rel)) as f:
+        return f.read()
+
+
+def section(rel, prefix):
+    for title, body in load_sections(os.path.join(SQL_DIR, rel)):
+        if title.startswith(prefix):
+            return f"-- {title}\n{body}"
+    raise KeyError(f"no '{prefix}' section in {rel}")
+
+
+def without_header(sql):
+    """A job file minus its leading `-- ===` comment block: the pop-up says what it is."""
+    lines = sql.splitlines()
+    i = 0
+    while i < len(lines) and (lines[i].startswith("--") or not lines[i].strip()):
+        i += 1
+    return "\n".join(lines[i:]).strip() + "\n"
+
+
+@app.get("/api/pipeline/sql")
+def pipeline_sql():
+    """Every action's default SQL, cut from flink_sql/ so the files stay the one source."""
+    catalog = section("ddl/01_fluss.sql", "Step 1:")
+    database = "CREATE DATABASE IF NOT EXISTS fluss.orders;\n"
+    view = lambda t, note: f"-- {note}\nSELECT * FROM {t};\n"
+    lake_view = next(b for t, b in load_sections(os.path.join(SQL_DIR, "explore.sql"))
+                     if t.startswith("Lab 4, Step 15: one table"))
+    enable = split_statements(read_sql("lake/enable_tiering.sql"))[0]
+    return jsonify({
+        "nodes": {
+            "kafka": {"create": section("ddl/02_sources.sql", "Step 3:"),
+                      "view": view("orders_log_kafka", "The raw order events on the Kafka topic. A streaming read: it keeps going until you cancel or close.")},
+            "product_catalog": {"create": section("ddl/02_sources.sql", "Step 7:"),
+                                "view": view("product_catalog_cdc", "PostgreSQL's product_catalog, read through CDC: the snapshot, then every change.")},
+            "orders_log": {"create": catalog + "\n" + section("ddl/01_fluss.sql", "Step 2:"),
+                           "view": view("fluss.orders.orders_log", "Every order event, as kafka-to-fluss writes it.")},
+            "product_lookup": {"create": catalog + "\n" + database + "\n" + section("ddl/01_fluss.sql", "Step 6:"),
+                               "view": view("fluss.orders.product_lookup", "One row per product, kept in sync with PostgreSQL by pgcdc-to-fluss.")},
+            "orders_enriched": {"create": catalog + "\n" + database + "\n" + section("ddl/01_fluss.sql", "Step 9:"),
+                                "view": view("fluss.orders.orders_enriched", "Order events joined with product details. Once tiered, this is a union read: Iceberg first, then Fluss.")},
+            "revenue_5m": {"view": "-- revenue_5m in PostgreSQL, through the postgres catalog: a bounded read, newest window first.\n"
+                                   "SET 'execution.runtime-mode' = 'batch';\n"
+                                   "SELECT * FROM postgres.orders.revenue_5m ORDER BY window_start DESC, category;\n"
+                                   "SET 'execution.runtime-mode' = 'streaming';\n"},
+            "lake": {"view": "-- orders_enriched in Iceberg ($lake) next to the union read (Iceberg + Fluss).\n" + lake_view},
+        },
+        "edges": {
+            **{e: {"sql": without_header(read_sql(spec["file"])) + RESET_NAME.lstrip("\n")} for e, spec in EDGES.items()},
+            "tiering": {"sql": "-- Opt orders_enriched in: the tiering service starts committing it to Iceberg.\n" + enable + ";\n"},
+        },
+    })
+
+
+@app.post("/api/pipeline/bootstrap/<session>")
+def pipeline_bootstrap(session):
+    """Register what the pre-created boxes need (the postgres catalog). IF NOT EXISTS."""
+    try:
+        for rel in BOOTSTRAP_FILES:
+            for stmt in split_statements(read_sql(rel)):
+                execute_and_wait(session, stmt)
+    except (GatewayError, requests.RequestException, OSError) as e:
+        return json_error(e)
+    return jsonify({"ok": True})
+
+
+# Which table a job writes, from its plan. Matching jobs to arrows by what they write, not
+# by name, keeps an arrow lit when an attendee edits pipeline.name in the pop-up. Fluss
+# sinks print "Sink(orders.orders_log)", JDBC ones "Sink(table=[postgres.orders.revenue_5m]".
+SINK_FULL = re.compile(r"Sink\(table=\[([^\]]+)\]")
+SINK_SHORT = re.compile(r"Sink\(([\w$.`]+)\)")
+plan_sinks = {}
+
+
+def job_sinks(jid):
+    if jid not in plan_sinks:
+        nodes = flink("GET", f"/jobs/{jid}/plan").get("plan", {}).get("nodes", [])
+        text = " ".join(n.get("description", "") for n in nodes)
+        plan_sinks[jid] = [s.replace("`", "") for s in SINK_FULL.findall(text) + SINK_SHORT.findall(text)]
+    return plan_sinks[jid]
+
+
+def writes(sinks, table):
+    full = ".".join(table)
+    return any(s == full or full.endswith("." + s) for s in sinks)
+
+
+def names(session, sql):
+    try:
+        return {r[0] for r in query_rows(session, sql)[1]}
+    except GatewayError:
+        return set()   # e.g. the catalog or database does not exist yet
+
+
+# ── The data probe: does a table return a row? ──
+# The one status check that costs a Flink job, so it runs in the background, one at a
+# time, in a session of its own, and only for a box whose feeding job runs and whose data
+# is not confirmed yet. Confirmed boxes are not probed again.
+probe_lock = threading.Lock()
+probe_wake = threading.Event()
+probe_ok, probe_next, probe_wanted = set(), {}, {}
+PROBE_TIMEOUT, PROBE_RETRY = 90, 30
+
+
+def want_probe(node):
+    with probe_lock:
+        if node in probe_ok or node in probe_wanted or time.time() < probe_next.get(node, 0):
+            return
+        probe_wanted[node] = f"SELECT 1 FROM {ident(*NODES[node]['table'])} LIMIT 1"
+    probe_wake.set()
+
+
+def first_row(session, sql):
+    op = gw("POST", f"/v1/sessions/{session}/statements", {"statement": sql})["operationHandle"]
+    path, deadline = result_path(session, op), time.time() + PROBE_TIMEOUT
+    try:
+        while path and time.time() < deadline:
+            res = gw("GET", path)
+            if (res.get("results") or {}).get("data"):
+                return True
+            if res.get("resultType") == "EOS":
+                return False
+            time.sleep(0.5)
+            path = res.get("nextResultUri")
+        return False
+    finally:
+        try:
+            gw("DELETE", f"/v1/sessions/{session}/operations/{op}/close")
+        except (GatewayError, requests.RequestException):
+            pass
+
+
+def probe_worker():
+    session = None
+    while True:
+        probe_wake.wait()
+        probe_wake.clear()
+        while True:
+            with probe_lock:
+                if not probe_wanted:
+                    break
+                node, sql = next(iter(probe_wanted.items()))
+            ok = False
+            try:
+                if session is None:
+                    session = gw("POST", "/v1/sessions", {"sessionName": "pipeline-probe"})["sessionHandle"]
+                ok = first_row(session, sql)
+            except (GatewayError, requests.RequestException):
+                session = None   # gone or broken: a fresh one next time
+            with probe_lock:
+                probe_wanted.pop(node, None)
+                if ok:
+                    probe_ok.add(node)
+                else:
+                    probe_next[node] = time.time() + PROBE_RETRY
+
+
+threading.Thread(target=probe_worker, daemon=True, name="pipeline-probe").start()
+
+lake_prefix = None
+
+
+def lake_table():
+    """orders_enriched's Iceberg table metadata from Lakekeeper, or None if it has none."""
+    global lake_prefix
+    if lake_prefix is None:
+        cfg = requests.get(f"{LAKEKEEPER}/catalog/v1/config", params={"warehouse": "warehouse"}, timeout=10).json()
+        lake_prefix = (cfg.get("overrides") or {}).get("prefix") or (cfg.get("defaults") or {}).get("prefix")
+    r = requests.get(f"{LAKEKEEPER}/catalog/v1/{lake_prefix}/namespaces/orders/tables/orders_enriched", timeout=10)
+    return r.json().get("metadata") if r.ok else None
+
+
+# ── MinIO: how many Parquet files the Iceberg table has on object storage ──
+# A ListObjectsV2 call signed with AWS Signature V4 by hand, so the editor needs no S3
+# library. Path-style, as MinIO serves it.
+
+def s3_get(path, params):
+    now = datetime.now(timezone.utc)
+    amz, day = now.strftime("%Y%m%dT%H%M%SZ"), now.strftime("%Y%m%d")
+    host = urlparse(S3_ENDPOINT).netloc
+    enc = lambda v: quote(v, safe="-_.~")
+    query = "&".join(f"{enc(k)}={enc(v)}" for k, v in sorted(params.items()))
+    payload = hashlib.sha256(b"").hexdigest()
+    signed = "host;x-amz-content-sha256;x-amz-date"
+    canonical = "\n".join(["GET", quote(path), query, f"host:{host}", f"x-amz-content-sha256:{payload}",
+                           f"x-amz-date:{amz}", "", signed, payload])
+    scope = f"{day}/{S3_REGION}/s3/aws4_request"
+    to_sign = "\n".join(["AWS4-HMAC-SHA256", amz, scope, hashlib.sha256(canonical.encode()).hexdigest()])
+    key = ("AWS4" + S3_SECRET_KEY).encode()
+    for part in (day, S3_REGION, "s3", "aws4_request"):
+        key = hmac.new(key, part.encode(), hashlib.sha256).digest()
+    signature = hmac.new(key, to_sign.encode(), hashlib.sha256).hexdigest()
+    auth = f"AWS4-HMAC-SHA256 Credential={S3_ACCESS_KEY}/{scope}, SignedHeaders={signed}, Signature={signature}"
+    r = requests.get(f"{S3_ENDPOINT}{quote(path)}?{query}", timeout=10,
+                     headers={"Authorization": auth, "x-amz-date": amz, "x-amz-content-sha256": payload})
+    r.raise_for_status()
+    return ET.fromstring(r.content)
+
+
+def parquet_count(location):
+    """Parquet files under the table's data/ folder. `location` is the table's s3:// URI."""
+    loc = urlparse(location)
+    bucket, prefix = loc.netloc, loc.path.strip("/") + "/data/"
+    ns = "{http://s3.amazonaws.com/doc/2006-03-01/}"
+    count, token = 0, None
+    while True:
+        params = {"list-type": "2", "prefix": prefix, "max-keys": "1000"}
+        if token:
+            params["continuation-token"] = token
+        root = s3_get(f"/{bucket}", params)
+        count += sum(1 for c in root.iter(ns + "Key") if c.text.endswith(".parquet"))
+        if (root.findtext(ns + "IsTruncated") or "").lower() != "true":
+            return count
+        token = root.findtext(ns + "NextContinuationToken")
+
+
+tiering_on = False   # once true it stays true: tiering cannot be switched off again
+
+
+@app.get("/api/pipeline/status/<session>")
+def pipeline_status(session):
+    global tiering_on
+    try:
+        catalogs = names(session, "SHOW CATALOGS")
+        listed = {
+            "default_catalog": names(session, "SHOW TABLES IN `default_catalog`.`default_database`"),
+            "fluss": names(session, "SHOW TABLES IN `fluss`.`orders`") if "fluss" in catalogs else set(),
+            "postgres": names(session, "SHOW TABLES IN `postgres`.`orders`") if "postgres" in catalogs else set(),
+        }
+    except requests.RequestException as e:
+        return json_error(e)
+    exists = {n: (spec.get("listed") or spec["table"][2]) in listed.get(spec["table"][0], set())
+              for n, spec in NODES.items()}
+
+    # Jobs, by the table they write.
+    try:
+        active = [j for j in flink("GET", "/jobs/overview").get("jobs", [])
+                  if j["state"] in ACTIVE and j["state"] != "CANCELLING"]
+        for j in active:
+            j["sinks"] = job_sinks(j["jid"])
+    except (GatewayError, requests.RequestException):
+        active = []
+    edges = {}
+    for e, spec in EDGES.items():
+        jobs = [{"jid": j["jid"], "name": j["name"], "state": j["state"]}
+                for j in active if writes(j["sinks"], NODES[spec["to"]]["table"])]
+        states = {j["state"] for j in jobs}
+        edges[e] = {"state": "running" if "RUNNING" in states else
+                             "failing" if states & {"RESTARTING", "FAILING"} else
+                             "starting" if jobs else "idle",
+                    "jobs": jobs, "ready": all(exists[n] for n in spec["from"] + [spec["to"]])}
+
+    nodes = {}
+    for n, spec in NODES.items():
+        feed = edges.get(spec.get("feed"), {}).get("state")
+        if not exists[n]:
+            with probe_lock:
+                probe_ok.discard(n)   # dropped: whatever was confirmed is gone with it
+            state = "inactive"
+        elif feed == "running":
+            want_probe(n)
+            state = "live" if n in probe_ok else "starting"
+        elif spec.get("source") and not spec.get("feed"):
+            state = "live"           # the Kafka topic and product_catalog: always flowing
+        else:
+            state = "ready"
+        nodes[n] = {"state": state, "exists": exists[n]}
+
+    # Tiering: the service, the opt-in on orders_enriched, and the Iceberg copy.
+    try:
+        tiering = tiering_status()
+    except (GatewayError, requests.RequestException):
+        tiering = {"available": False, "job": None}
+    if exists["orders_enriched"] and not tiering_on:
+        try:
+            ddl = query_rows(session, "SHOW CREATE TABLE `fluss`.`orders`.`orders_enriched`")[1][0][0]
+            tiering_on = "'table.datalake.enabled' = 'true'" in ddl
+        except (GatewayError, IndexError):
+            pass
+    if not exists["orders_enriched"]:
+        tiering_on = False
+    snapshot, files = None, None
+    try:
+        meta = lake_table() if tiering_on else None
+        if meta:
+            snapshot = meta.get("current-snapshot-id")
+            files = parquet_count(meta["location"]) if meta.get("location") else None
+    except (requests.RequestException, ValueError, KeyError, ET.ParseError):
+        pass
+    tjob = (tiering.get("job") or {}).get("state")
+    nodes["tiering"] = {"state": "live" if tjob == "RUNNING" else "starting" if tjob else "ready"}
+    nodes["lake"] = {"state": "live" if snapshot else "starting" if tiering_on and tjob == "RUNNING"
+                     else "ready" if tiering_on else "inactive"}
+    edges["tiering"] = {"state": "running" if tiering_on else "idle", "jobs": [],
+                        "ready": exists["orders_enriched"]}
+    edges["commits"] = {"state": "running" if snapshot and tjob == "RUNNING" else "idle", "jobs": []}
+    # MinIO: the Parquet files actually on object storage, counted by listing them.
+    nodes["minio"] = {"files": files, "state":
+                      "inactive" if files is None else
+                      ("live" if tjob == "RUNNING" else "ready") if files > 0 else
+                      "starting" if tjob == "RUNNING" else "ready"}
+    missing = [n for n, spec in NODES.items() if spec.get("precreated") and not exists[n]]
+    return jsonify({"nodes": nodes, "edges": edges, "tiering": tiering, "bootstrap": bool(missing)})
+
+
+@app.post("/api/jobs/<jid>/cancel")
+def job_cancel(jid):
+    try:
+        flink("PATCH", f"/jobs/{jid}?mode=cancel")
+    except (GatewayError, requests.RequestException) as e:
+        return json_error(e)
+    return jsonify({})
 
 
 @app.get("/api/examples")

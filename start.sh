@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# start.sh — streaming_lakehouse_oss scenario bootstrap
+# start.sh — streaming lakehouse workshop bootstrap
 #
 # The streaming lakehouse labs on open source — Apache Flink 1.20, Apache Fluss 0.9 and
 # Apache Iceberg (Lakekeeper + MinIO), read back with Trino — all in Docker Compose.
 #
 # Usage:
-#   cd scenarios/streaming_lakehouse_oss
+#   cd streaming_lakehouse
 #   ./start.sh                   bring everything up, start the pipeline and the tiering
 #   ./start.sh --services-only   bring the stack up, submit nothing (the workshop mode)
 #   ./start.sh --reset           docker compose down -v first: empty Fluss, empty lake

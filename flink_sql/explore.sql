@@ -35,9 +35,9 @@ SELECT COUNT(*) AS products FROM fluss.orders.product_lookup;
 SELECT * FROM fluss.orders.orders_enriched;
 
 
--- ---------------------------------------- Lab 3, Step 12: enable tiering
--- A single ALTER TABLE. The tiering service picks the table up on its next round —
--- start it first (./tiering.sh), or this just waits for it.
+-- ---------------------------------------- Lab 3, Step 11: enable tiering
+-- A single ALTER TABLE: it only marks the table. Nothing reaches Iceberg until the
+-- tiering service runs — start it next (Step 12: the Start button in the header).
 ALTER TABLE fluss.orders.orders_enriched
 SET ('table.datalake.enabled' = 'true', 'table.datalake.freshness' = '30s');
 
@@ -49,20 +49,29 @@ SET ('table.datalake.enabled' = 'true', 'table.datalake.freshness' = '30s');
 SHOW CREATE TABLE fluss.orders.orders_enriched;
 
 
--- --------------------------------- Lab 4, Step 15: the same query, now a union read
--- Nothing changed in the query. Under the hood Flink now reads the already-tiered rows
--- from Iceberg and continues with the fresh rows still only in Fluss, as one result.
-SELECT * FROM fluss.orders.orders_enriched;
-
-
--- ------------------------------------- Lab 4: only what is already in Iceberg
--- The $lake suffix reads the Iceberg side alone, through the same Fluss catalog. Its
--- count trails a Fluss-side count by up to one freshness interval.
+-- ------------------------------------ Lab 4, Step 15: one table, two tiers
+-- $lake reads the Iceberg side alone; the plain table name is a union read of Iceberg
+-- plus the rows still only in Fluss. The union read has more events and a latest_event
+-- only seconds old; $lake trails it by up to one tiering commit. Run both again: the
+-- union read grows every time, $lake jumps only when a commit lands.
 SET 'execution.runtime-mode' = 'batch';
-SELECT status, COUNT(*) AS events
-FROM fluss.orders.`orders_enriched$lake`
-GROUP BY status;
+
+-- Lake layer only (Iceberg): the rows tiering has committed so far
+SELECT COUNT(*) AS events, MAX(event_time) AS latest_event
+FROM fluss.orders.`orders_enriched$lake`;
+
+-- Union read, both layers: Iceberg + the rows still only in Fluss
+SELECT COUNT(*) AS events, MAX(event_time) AS latest_event
+FROM fluss.orders.orders_enriched;
+
 SET 'execution.runtime-mode' = 'streaming';
+
+
+-- ------------------------------- Lab 4, Step 15: a streaming union read
+-- The same query as Step 10. It now starts from the rows in Iceberg and carries on with
+-- live rows from Fluss. Expect 20-60 s before the first rows: the Iceberg side is
+-- planned first.
+SELECT * FROM fluss.orders.orders_enriched;
 
 
 -- ----------------------------- Lab 4, Step 18: Iceberg snapshots, seen from Flink
@@ -98,7 +107,7 @@ SHOW TABLES IN iceberg.orders;
 -- ---------------------------------- Bonus: time travel through the Iceberg catalog
 -- Replace the snapshot id with one from the $lake$snapshots query above.
 SET 'execution.runtime-mode' = 'batch';
-SELECT COUNT(*) AS orders_at_that_point
+SELECT COUNT(*) AS events_at_that_point
 FROM iceberg.orders.orders_enriched /*+ OPTIONS('snapshot-id' = '1234567890123456789') */;
 SET 'execution.runtime-mode' = 'streaming';
 
@@ -111,7 +120,8 @@ SET ('table.datalake.enabled' = 'true', 'table.datalake.freshness' = '30s');
 
 -- ------------------------------------ Bonus: the current state of every order
 -- One row per order. On a PK table a streaming read is a changelog: rows are updated
--- in place as the orders move on.
+-- in place as the orders move on. Once the table is tiered, expect up to a minute before
+-- the first rows.
 SELECT status, COUNT(*) AS orders
 FROM fluss.orders.order_status
 GROUP BY status;
