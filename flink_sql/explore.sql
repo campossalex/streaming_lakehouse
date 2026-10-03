@@ -92,7 +92,7 @@ CREATE CATALOG IF NOT EXISTS iceberg WITH (
   'type'                 = 'iceberg',
   'catalog-type'         = 'rest',
   'uri'                  = 'http://lakekeeper:8181/catalog',
-  'warehouse'            = 'warehouse',
+  'warehouse'            = 'lakehouse',
   'io-impl'              = 'org.apache.iceberg.aws.s3.S3FileIO',
   's3.endpoint'          = 'http://minio:9000',
   's3.access-key-id'     = 'admin',

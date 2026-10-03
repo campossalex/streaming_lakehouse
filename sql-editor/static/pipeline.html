@@ -16,14 +16,20 @@
   } catch {}
 </script>
 <link rel="stylesheet" href="/static/common.css">
+<link rel="stylesheet" href="/static/catalog.css">
 <script src="/static/common.js"></script>
+<script src="/static/catalog.js"></script>
 <style>
   /* Page-only tokens: amber for "starting", the tint of a live box. */
   :root { --warn: #9a6700; --live-bg: color-mix(in srgb, var(--ok) 14%, var(--panel));
-          --fluss: #3d5bd9; --iceberg: #0f7f99;    /* region tints: Fluss's wave blue, an ice teal, */
-          --sources: #7a45c9; --warehouse: #b4590d; }   /* violet for the sources, orange for the warehouse */
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --warn: #e3b341; --fluss: #8fa2ff; --iceberg: #5cc8e0; --sources: #c4a2ff; --warehouse: #f2a65e; } }
-  :root[data-theme="dark"] { --warn: #e3b341; --fluss: #8fa2ff; --iceberg: #5cc8e0; --sources: #c4a2ff; --warehouse: #f2a65e; }
+          /* Region washes, one light colour per column of the diagram. */
+          /* (light shades dark enough for the labels: 4.5:1 or more against their wash) */
+          --sources: #a64f00; --fluss: #3d5bd9; --flink: #7d5f00;
+          --iceberg: #0b6a7f; --warehouse: #7a45c9; --consumers: #22703d; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --warn: #e3b341;
+    --sources: #f5a25a; --fluss: #8fa2ff; --flink: #e8c547; --iceberg: #5cc8e0; --warehouse: #c4a2ff; --consumers: #71d394; } }
+  :root[data-theme="dark"] { --warn: #e3b341;
+    --sources: #f5a25a; --fluss: #8fa2ff; --flink: #e8c547; --iceberg: #5cc8e0; --warehouse: #c4a2ff; --consumers: #71d394; }
 
   * { box-sizing: border-box; }
   /* The page is the diagram: header on top, the stage fills the rest of the window and
@@ -47,7 +53,8 @@
   button.danger { color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, var(--border)); }
   #theme { width: 32px; height: 32px; padding: 0; font-size: 16px; line-height: 1; }
   /* ── The diagram: the whole stage, panned and zoomed through its viewBox ── */
-  #stage { flex: 1; min-height: 0; position: relative; overflow: hidden; outline: none;
+  #layout { flex: 1; min-height: 0; display: flex; position: relative; }   /* catalog panel | stage */
+  #stage { flex: 1; min-width: 0; min-height: 0; position: relative; overflow: hidden; outline: none;
            background: radial-gradient(circle, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1.2px) 0 0 / 22px 22px, var(--bg); }
   #stage:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
   .arch svg { display: block; width: 100%; height: 100%; color: var(--muted); cursor: grab; touch-action: none;
@@ -58,12 +65,12 @@
   .arch .box { fill: var(--panel); stroke: var(--border); stroke-width: 1.5; transition: fill .3s, stroke .3s; }
   .arch .region { fill: none; stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 5 4; }
   /* Each technology's area: a dashed border in its colour over a light wash of it. */
-  .arch .region.fluss { stroke: color-mix(in srgb, var(--fluss) 60%, transparent); fill: color-mix(in srgb, var(--fluss) 7%, transparent); }
-  .arch .region.iceberg { stroke: color-mix(in srgb, var(--iceberg) 60%, transparent); fill: color-mix(in srgb, var(--iceberg) 8%, transparent); }
-  .arch .region.sources { stroke: color-mix(in srgb, var(--sources) 60%, transparent); fill: color-mix(in srgb, var(--sources) 7%, transparent); }
-  .arch .region.flink, .arch .region.consumers { stroke: color-mix(in srgb, var(--muted) 45%, transparent);
-                                                  fill: color-mix(in srgb, var(--muted) 5%, transparent); }
-  .arch .region.warehouse { stroke: color-mix(in srgb, var(--warehouse) 60%, transparent); fill: color-mix(in srgb, var(--warehouse) 8%, transparent); }
+  .arch .region.sources { stroke: color-mix(in srgb, var(--sources) 55%, transparent); fill: color-mix(in srgb, var(--sources) 10%, transparent); }
+  .arch .region.fluss { stroke: color-mix(in srgb, var(--fluss) 55%, transparent); fill: color-mix(in srgb, var(--fluss) 10%, transparent); }
+  .arch .region.flink { stroke: color-mix(in srgb, var(--flink) 55%, transparent); fill: color-mix(in srgb, var(--flink) 10%, transparent); }
+  .arch .region.iceberg { stroke: color-mix(in srgb, var(--iceberg) 55%, transparent); fill: color-mix(in srgb, var(--iceberg) 10%, transparent); }
+  .arch .region.warehouse { stroke: color-mix(in srgb, var(--warehouse) 55%, transparent); fill: color-mix(in srgb, var(--warehouse) 10%, transparent); }
+  .arch .region.consumers { stroke: color-mix(in srgb, var(--consumers) 55%, transparent); fill: color-mix(in srgb, var(--consumers) 10%, transparent); }
   .arch .title { fill: var(--fg); font-size: 13px; font-weight: 600; }
   .arch .icon { fill: var(--fg); color: var(--fg); opacity: .85; }
   .node[data-state="inactive"] .icon { opacity: .4; }
@@ -73,8 +80,8 @@
   :root[data-theme="dark"] .fluss-mark { filter: invert(1); }
   .arch .sub { fill: var(--muted); font-size: 11px; font-family: var(--mono); }
   .arch .region-label { fill: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .06em; }
-  .arch .region-label.fluss { fill: var(--fluss); } .arch .region-label.iceberg { fill: var(--iceberg); }
-  .arch .region-label.sources { fill: var(--sources); } .arch .region-label.warehouse { fill: var(--warehouse); }
+  .arch .region-label.sources { fill: var(--sources); } .arch .region-label.fluss { fill: var(--fluss); } .arch .region-label.flink { fill: var(--flink); }
+  .arch .region-label.iceberg { fill: var(--iceberg); } .arch .region-label.warehouse { fill: var(--warehouse); } .arch .region-label.consumers { fill: var(--consumers); }
   .arch .edge { fill: none; stroke: var(--muted); stroke-width: 1.5; transition: stroke .3s; }
   /* A halo in the background colour, so a region border passing behind a label is masked. */
   .arch .edge-label { fill: var(--muted); font-size: 11px; font-family: var(--mono);
@@ -101,7 +108,8 @@
 
   /* Buttons drawn inside the SVG */
   .pill { cursor: pointer; outline: none; }
-  .pill rect { fill: var(--panel); stroke: var(--border); stroke-width: 1.2; transition: fill .15s, stroke .15s; }
+  /* Only the hover border animates: a fill transition can be caught mid-way on a theme change. */
+  .pill rect { fill: var(--panel); stroke: var(--border); stroke-width: 1.2; transition: stroke .15s; }
   .pill text { fill: var(--fg); font-size: 11px; font-weight: 600; pointer-events: none; }
   .pill:hover rect, .pill:focus-visible rect { stroke: var(--accent); }
   .pill:focus-visible rect { stroke-width: 2; }
@@ -113,6 +121,8 @@
   .pill.off { cursor: default; } .pill.off rect { stroke-dasharray: 3 3; } .pill.off text { fill: var(--muted); font-weight: 500; }
   .pill.off:hover rect { stroke: var(--border); }
   .pill[hidden] { display: none; }
+  .pill.src .glyph { fill: none; stroke: var(--fg); stroke-width: 1.7; stroke-linecap: round; pointer-events: none; }
+  .pill.src:hover .glyph, .pill.src:focus-visible .glyph { stroke: var(--accent); }
 
   /* ── Floating panels over the stage ── */
   .float { position: absolute; z-index: 2; background: color-mix(in srgb, var(--panel) 94%, transparent);
@@ -201,6 +211,11 @@
 </head>
 <body>
 <header>
+  <button id="catalogToggle" type="button" aria-controls="catalog" aria-expanded="false"
+          title="Browse catalogs, databases and tables"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"
+    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/>
+    <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>Catalog</button>
   <h1>Pipeline Builder</h1>
   <span id="status">connecting…</span>
   <a id="toEditor" href="/">Flink SQL editor ↗</a>
@@ -208,6 +223,7 @@
   <button id="theme" type="button"></button>
 </header>
 
+<div id="layout">
 <div id="stage" class="arch" tabindex="0" aria-label="Pipeline diagram: drag to pan, scroll or pinch to zoom, + and - keys to zoom, 0 to reset the view">
     <svg id="diagram" viewBox="0 0 1390 480" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Pipeline diagram. Boxes are tables, arrows are Flink jobs; each has buttons below it.">
       <defs>
@@ -233,7 +249,7 @@
       <rect class="region flink" x="704" y="20" width="196" height="450" rx="10"/>
       <text class="region-label flink" x="718" y="42">APACHE FLINK · jobs</text>
       <rect class="region iceberg" x="944" y="20" width="196" height="290" rx="10"/>
-      <text class="region-label iceberg" x="958" y="42">APACHE ICEBERG</text>
+      <text class="region-label iceberg" x="958" y="42">LAKEHOUSE</text>
       <rect class="region warehouse" x="944" y="340" width="196" height="130" rx="10"/>
       <text class="region-label warehouse" x="958" y="362">DATA WAREHOUSE</text>
       <rect class="region consumers" x="1184" y="20" width="196" height="450" rx="10"/>
@@ -269,8 +285,14 @@
       </g>
       <line class="edge" x1="1042" y1="140" x2="1042" y2="190" marker-end="url(#head)"/>
       <text class="edge-label" x="1050" y="170">points to</text>
-      <line class="edge" x1="1140" y1="152" x2="1200" y2="152" marker-end="url(#head)"/>
-      <text class="edge-label" x="1170" y="144" text-anchor="middle">reads</text>
+      <line class="edge" x1="1140" y1="82" x2="1200" y2="82" marker-end="url(#head)"/>
+      <text class="edge-label" x="1170" y="74" text-anchor="middle">reads</text>
+      <line class="edge" x1="1140" y1="182" x2="1200" y2="182" marker-end="url(#head)"/>
+      <text class="edge-label" x="1170" y="174" text-anchor="middle">catalog</text>
+      <line class="edge" x1="1140" y1="278" x2="1200" y2="278" marker-end="url(#head)"/>
+      <text class="edge-label" x="1170" y="270" text-anchor="middle">history</text>
+      <polyline class="edge" points="644,166 666,166 666,326 1180,326 1180,300 1200,300" marker-end="url(#head)"/>
+      <text class="edge-label" x="920" y="322" text-anchor="middle">fresh rows from Fluss</text>
       <line class="edge" x1="1122" y1="400" x2="1200" y2="400" marker-end="url(#head)"/>
       <text class="edge-label" x="1161" y="392" text-anchor="middle">queries</text>
 
@@ -336,10 +358,22 @@
         <text class="sub" x="1053" y="414" text-anchor="middle">revenue_5m</text>
       </g>
       <g class="node" data-node="trino">
-        <rect class="box" x="1202" y="126" width="160" height="52" rx="6"/>
-        <use class="icon" href="#i-trino" x="1208" y="142" width="20" height="20"/>
-        <text class="title" x="1293" y="148" text-anchor="middle">Trino</text>
-        <text class="sub" x="1293" y="166" text-anchor="middle">in CloudBeaver</text>
+        <rect class="box" x="1202" y="56" width="160" height="52" rx="6"/>
+        <use class="icon" href="#i-trino" x="1208" y="72" width="20" height="20"/>
+        <text class="title" x="1293" y="78" text-anchor="middle">Trino</text>
+        <text class="sub" x="1293" y="96" text-anchor="middle">in CloudBeaver</text>
+      </g>
+      <g class="node" data-node="iceberg_flink">
+        <rect class="box" x="1202" y="156" width="160" height="52" rx="6"/>
+        <use class="icon" href="#i-flink" x="1208" y="172" width="20" height="20"/>
+        <text class="title" x="1293" y="178" text-anchor="middle">Flink</text>
+        <text class="sub" x="1293" y="196" text-anchor="middle">Iceberg</text>
+      </g>
+      <g class="node" data-node="union">
+        <rect class="box" x="1202" y="262" width="160" height="52" rx="6"/>
+        <use class="icon" href="#i-flink" x="1208" y="278" width="20" height="20"/>
+        <text class="title" x="1293" y="284" text-anchor="middle">Flink</text>
+        <text class="sub" x="1293" y="302" text-anchor="middle">Union Reads</text>
       </g>
       <g class="node" data-node="grafana">
         <rect class="box" x="1202" y="374" width="160" height="52" rx="6"/>
@@ -367,7 +401,9 @@
         <li><b>Create</b> <code>product_lookup</code> and the PostgreSQL source, then <b>Deploy</b> <code>pgcdc-to-fluss</code>. <span class="lab">Lab 2 · Steps 6–8</span></li>
         <li><b>Create</b> <code>orders_enriched</code>, then <b>Deploy</b> <code>product-enrichment</code>. <span class="lab">Lab 2 · Steps 9–10</span></li>
         <li><b>Enable</b> tiering on <code>orders_enriched</code>, then <b>Start</b> the tiering service; Lakekeeper turns green after the first commit. <span class="lab">Lab 3 · Steps 11–12</span></li>
-        <li><b>Deploy</b> <code>revenue-analytics-sink</code> and open Grafana. <span class="lab">Lab 5 · Steps 19–20</span></li>
+        <li><b>View data</b> on <b>Union read</b>: Iceberg alone next to Iceberg + Fluss. <span class="lab">Lab 4 · Step 15</span></li>
+      <li>On <b>Flink · Iceberg</b>: <b>Create</b> the iceberg catalog, then <b>View data</b> to time-travel to the first snapshot, Flink reading Iceberg with no Fluss in the path. <span class="lab">Lab 4 · Step 18 bonus</span></li>
+      <li><b>Deploy</b> <code>revenue-analytics-sink</code> and open Grafana. <span class="lab">Lab 5 · Steps 19–20</span></li>
       </ol>
       <div class="legend">
         <span><i class="inactive"></i>not created yet</span>
@@ -388,6 +424,7 @@
     <span class="sep"></span>
     <button type="button" id="zoomFit" title="Reset view: centre the diagram at 100% (0, or double-click the background)">⟲ Reset view</button>
   </div>
+</div>
 </div>
 
 <dialog id="act" aria-labelledby="actTitle">
@@ -421,6 +458,7 @@ let session = null, sql = null, status = null;
 // [x, y, width, label, action, target]. Actions: view / create (a box), deploy (an
 // arrow), enable / start (tiering), open (a link to another UI).
 const PILLS = [
+  [158, 32, 22, "", "open", "redpanda"],              [158, 172, 22, "", "open", "cloudbeaver"],   // icon buttons
   [26, 116, 72, "Create", "create", "kafka"],           [104, 116, 72, "View data", "view", "kafka"],
   [26, 256, 72, "Create", "create", "product_catalog"], [104, 256, 72, "View data", "view", "product_catalog"],
   [290, 110, 72, "Create", "create", "orders_log"],     [368, 110, 72, "View data", "view", "orders_log"],
@@ -428,16 +466,20 @@ const PILLS = [
   [484, 180, 64, "Create", "create", "orders_enriched"], [552, 180, 70, "View data", "view", "orders_enriched"],
   [197, 90, 74, "Deploy", "deploy", "kafka_to_fluss"],
   [197, 230, 74, "Deploy", "deploy", "pgcdc_to_fluss"],
-  [527, 94, 74, "Deploy", "deploy", "enrichment"],
+  [527, 91, 74, "Deploy", "deploy", "enrichment"],
   [736, 184, 66, "Enable", "enable", "tiering"],        [808, 184, 66, "Start", "start", "tiering"],
   [768, 432, 74, "Deploy", "deploy", "revenue"],
   [997, 118, 90, "View data", "view", "lake"],
   [997, 250, 90, "Open", "open", "minio"],
   [997, 432, 90, "View data", "view", "revenue_5m"],
-  [1237, 184, 90, "Open", "open", "trino"],
+  [1237, 114, 90, "Open", "open", "trino"],
+  [1208, 214, 70, "Create", "create", "iceberg_flink"], [1284, 214, 72, "View data", "view", "iceberg_flink"],
+  [1237, 320, 90, "View data", "view", "union"],
   [1237, 432, 90, "Open", "open", "grafana"],
 ];
-const LINKS = { minio: [9001, "/"], trino: [8978, "/"], grafana: [3000, "/d/streaming-lakehouse-orders"] };
+const LINKS = { minio: [9001, "/"], trino: [8978, "/"], grafana: [3000, "/d/streaming-lakehouse-orders"],
+                // the sources themselves: the Kafka topic, and PostgreSQL through CloudBeaver's connection
+                redpanda: [8082, "/topics/orders_log"], cloudbeaver: [8978, "/"] };
 const SVGNS = "http://www.w3.org/2000/svg";
 
 function drawPills() {
@@ -448,6 +490,13 @@ function drawPills() {
     p.dataset.action = action; p.dataset.target = target;
     p.innerHTML = `<rect x="${x}" y="${y}" width="${w}" height="20" rx="10"/><text x="${x + w / 2}" y="${y + 14}" text-anchor="middle"></text>`;
     p.querySelector("text").textContent = label;
+    const where = { redpanda: "the orders_log topic in Redpanda Console", cloudbeaver: "product_catalog in CloudBeaver (PostgreSQL — orders)" };
+    if (where[target]) {   // View source: a round icon button, a magnifying glass, with a tooltip
+      p.querySelector("text").remove();
+      p.insertAdjacentHTML("beforeend", `<circle class="glyph" cx="${x + 10}" cy="${y + 9}" r="4.2"/><path class="glyph" d="M${x + 13.1} ${y + 12.1} L${x + 16} ${y + 15}"/>`);
+      const t = document.createElementNS(SVGNS, "title"); t.textContent = "View source"; p.prepend(t);
+      p.setAttribute("aria-label", "View source: " + where[target]); p.classList.add("src");
+    }
     const go = () => { if (!p.classList.contains("off") || action === "view" || action === "deploy") onPill(action, target); };
     p.addEventListener("click", go);
     p.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
@@ -467,7 +516,8 @@ function setPill(p, label, cls, aria) {
 const STATE_LABEL = { inactive: "not created", ready: "created", starting: "starting", live: "live",
                       idle: "not deployed", running: "running", failing: "restarting" };
 const NODE_KIND = { kafka: "SOURCE", product_catalog: "SOURCE", orders_log: "FLUSS LOG", product_lookup: "FLUSS PK",
-                    orders_enriched: "FLUSS LOG", revenue_5m: "POSTGRES", lake: "ICEBERG", tiering: "FLINK JOB" };
+                    orders_enriched: "FLUSS LOG", revenue_5m: "POSTGRES", lake: "ICEBERG", tiering: "FLINK JOB", union: "FLINK QUERY",
+                    iceberg_flink: "FLINK + ICEBERG" };
 
 function paint() {
   if (!status) return;
@@ -496,6 +546,11 @@ function paint() {
   for (const n of ["kafka", "product_catalog", "orders_log", "product_lookup", "orders_enriched", "revenue_5m"])
     setPill(pill("view", n), "View data", status.nodes[n].exists ? "" : "off", `View the data of ${n}`);
   setPill(pill("view", "lake"), "View data", status.nodes.lake.state === "inactive" ? "off" : "", "View orders_enriched in Iceberg");
+  const ice = status.nodes.iceberg_flink.exists;
+  setPill(pill("create", "iceberg_flink"), ice ? "✓ Created" : "Create", ice ? "off" : "primary",
+          ice ? "The iceberg catalog is registered" : "Create the iceberg catalog in Flink");
+  setPill(pill("view", "iceberg_flink"), "View data", ice ? "" : "off", "Time travel through the iceberg catalog");
+  setPill(pill("view", "union"), "View data", status.nodes.union.exists ? "" : "off", "Run the union read");
   for (const e of ["kafka_to_fluss", "pgcdc_to_fluss", "enrichment", "revenue"]) {
     const s = status.edges[e];
     const n = s.jobs.length;
@@ -528,7 +583,7 @@ async function poll() {
     setStatus(`session ${session.slice(0, 8)} · shared with the SQL editor`);
     paint();
   } catch (e) {
-    if (/session|410|not found/i.test(e.message)) { session = null; store.set("session", null); await ensureSession(); }
+    if (/session|410|not found/i.test(e.message)) { session = null; store.set("session", null); await ensureSession(); catalogReload(); }
     else setStatus("status unavailable: " + e.message.split("\n")[0], true);
   } finally { polling = false; }
 }
@@ -554,7 +609,10 @@ const ABOUT = {
   product_lookup: "A Fluss primary-key table: one row per product, kept in sync with PostgreSQL by pgcdc-to-fluss.",
   orders_enriched: "A Fluss Log table of order events enriched with product details. The table that is tiered to Iceberg.",
   revenue_5m: "A PostgreSQL table, pre-created, reached through the postgres JDBC catalog. revenue-analytics-sink upserts one row per 5-minute window and category; Grafana reads it.",
-  lake: "orders_enriched as an Iceberg table, catalogued by Lakekeeper. Compare the $lake count (Iceberg only) with the union read (Iceberg + Fluss).",
+  lake: "orders_enriched as an Iceberg table, catalogued by Lakekeeper: one snapshot per tiering commit, read through Fluss's $lake view.",
+  iceberg_flink_create: "Registers Lakekeeper — the Iceberg REST catalog — in Flink as the catalog iceberg, so Flink reads the Iceberg tables directly, with no Fluss in the path. It is kept by the CatalogStore, like fluss and postgres: it survives a new session. The SHOW TABLES after it lists what Lakekeeper holds; it fails until tiering has created the orders namespace.",
+  iceberg_flink: "Flink reading orders_enriched straight from Iceberg, through the iceberg catalog: no Fluss in the path. Iceberg keeps every snapshot, so the query can travel back to one with an OPTIONS('snapshot-id') hint. The oldest snapshot's id is filled in for you.",
+  union: "A Flink query of orders_enriched that reads both tiers as one table: the history already in Iceberg, then the fresh rows still only in Fluss. Compare it with Iceberg alone ($lake): the union read has more rows and a newer latest_event.",
   tiering: "The Fluss Datalake Tiering Service: one Flink job that commits every opted-in Fluss table to Iceberg. It is uploaded and ready; start it here.",
   kafka_to_fluss: "Reads every event from the Kafka topic and appends it to fluss.orders.orders_log.",
   pgcdc_to_fluss: "Snapshots product_catalog, then streams every change into fluss.orders.product_lookup.",
@@ -578,6 +636,12 @@ function onPill(action, target) {
 
 function defaultSql(action, target) {
   if (!sql) return "";
+  if (action === "view" && target === "iceberg_flink") {
+    const first = status?.nodes.iceberg_flink.firstSnapshot, q = sql.nodes.iceberg_flink.view;
+    return first ? q.replace("1234567890123456789", first)
+                    .replace("-- Replace the snapshot id with one from the $lake$snapshots query above.",
+                             `-- snapshot-id ${first} is orders_enriched's oldest snapshot: the table as of its first tiering commit.`) : q;
+  }
   if (action === "view") return sql.nodes[target]?.view || "";
   if (action === "create") return sql.nodes[target]?.create || "";
   if (action === "deploy") return sql.edges[target]?.sql || "";
@@ -595,12 +659,15 @@ function openDialog(action, target) {
               : action === "enable" ? "Enable tiering · orders_enriched"
               : action === "start" ? "Tiering service"
               : target === "lake" ? "orders_enriched in Iceberg"
+              : target === "union" ? "Union read · orders_enriched"
+              : target === "iceberg_flink" ? "Flink + Iceberg · time travel"
               : target === "kafka" ? "Kafka · orders_log topic"
               : target === "product_catalog" ? "PostgreSQL · product_catalog"
               : target === "revenue_5m" ? "PostgreSQL · revenue_5m" : `fluss.orders.${target}`;
-  $("actTitle").textContent = (action === "view" ? "View data · " : action === "create" ? "Create · " : action === "deploy" ? "Deploy · " : "") + title;
+  $("actTitle").textContent = action === "create" && target === "iceberg_flink" ? "Create · the iceberg catalog (Lakekeeper)"
+    : (action === "view" ? "View data · " : action === "create" ? "Create · " : action === "deploy" ? "Deploy · " : "") + title;
   $("actKind").textContent = action === "deploy" ? "FLINK JOB" : action === "enable" ? "ALTER TABLE" : NODE_KIND[target] || "";
-  $("actAbout").textContent = ABOUT[action === "enable" ? "enable" : target] || "";
+  $("actAbout").textContent = ABOUT[action === "enable" ? "enable" : action === "create" && target === "iceberg_flink" ? "iceberg_flink_create" : target] || "";
   refreshDialog();
   if (!$("act").open) $("act").showModal();
   setTimeout(() => editor.refresh(), 0);
@@ -616,7 +683,16 @@ function refreshDialog() {
   const jobLink = j => `<a target="_blank" href="${location.protocol}//${host}:8081/#/job/running/${j.jid}/overview">${esc(j.name)} · ${j.jid.slice(0, 8)}</a>`;
   if (action === "view") {
     buttons.push(btn("▶ Run", "primary", () => runSql(editor.getValue()), !node?.exists && target !== "lake"));
-    if (!node?.exists && target !== "lake") notes.push(["This table does not exist yet: create it first.", ""]);
+    if (!node?.exists && target === "union") notes.push(["Create orders_enriched first: the union read is a query of it.", ""]);
+    else if (!node?.exists && target === "iceberg_flink") notes.push(["Create the iceberg catalog first: the Create button on this box.", ""]);
+    else if (target === "iceberg_flink" && !node.firstSnapshot) notes.push(["Iceberg has no snapshot yet: enable and start tiering, then wait for the first commit. Until then the snapshot id below is a placeholder.", ""]);
+    else if (!node?.exists && target !== "lake") notes.push(["This table does not exist yet: create it first.", ""]);
+    if (target === "union" && node?.exists && status.nodes.lake.state !== "live")
+      notes.push(["Nothing is in Iceberg yet, so this reads Fluss alone. Enable and start tiering to make it a real union of both tiers.", ""]);
+  } else if (action === "create" && target === "iceberg_flink") {
+    const ice = status.nodes.iceberg_flink.exists;
+    buttons.push(btn(ice ? "✓ Already created" : "Create catalog", "primary", () => runSql(editor.getValue()), ice));
+    if (ice) notes.push(["The iceberg catalog is registered: browse it in the Catalog panel, or query iceberg.orders.* from the SQL editor.", "ok"]);
   } else if (action === "create") {
     buttons.push(btn(node?.exists ? "✓ Already created" : "Create table", "primary", () => runSql(editor.getValue()), node?.exists));
     if (node?.exists) notes.push(["The table exists. Running the SQL again changes nothing: every statement is IF NOT EXISTS.", "ok"]);
@@ -702,12 +778,20 @@ async function runSql(text) {
   const token = runToken;
   $("actResults").replaceChildren();
   const { statements } = await api("/api/split", { sql: text });
+  // The catalog browser refreshes only what the script's DDL changed (catalog.js); an
+  // unqualified name needs the session's current catalog, taken before the script runs.
+  const before = !$("catalog").hidden && needsCurrent(statements)
+    ? await api(`/api/catalog/${session}/current`).catch(() => null) : null;
+  const succeeded = [];
   for (const stmt of statements) {
-    if (token !== runToken) return;
+    if (token !== runToken) break;
     const set = stmt.match(/^\s*SET\s+'([^']+)'/i), reset = stmt.match(/^\s*RESET\s+'([^']+)'/i);
-    if (!(await runOne(stmt, token))) { refreshDialog(); return; }
+    if (!(await runOne(stmt, token))) break;
+    succeeded.push(stmt);
     if (set) setKeys.add(set[1]); if (reset) setKeys.delete(reset[1]);
   }
+  catalogAfterDdl(succeeded, before);
+  if (succeeded.length < statements.length) { refreshDialog(); return; }
   setKeys = new Set();
   refreshDialog();
   setTimeout(poll, 300);   // the diagram catches up with what was just created or deployed
@@ -962,6 +1046,28 @@ $("stepsHead").addEventListener("dblclick", e => {   // back to the default spot
 $("stepsHead").title = "Drag to move · double-click to put it back";
 if (stepsPos?.collapsed) setCollapsed(true);
 
+// ── The catalog browser (catalog.js) ─────────────────────────────────────────
+// The pop-ups are modal, so the panel cannot be clicked while one is open: a
+// double-clicked name is copied instead, ready to paste into a pop-up's SQL.
+catalogInit({
+  layout: $("layout"),
+  storeKey: "pipeline.catalog",
+  insert: async t => {
+    try { await navigator.clipboard.writeText(t); }
+    catch {   // no clipboard API outside a secure context
+      const ta = Object.assign(document.createElement("textarea"), { value: t });
+      document.body.append(ta); ta.select(); document.execCommand("copy"); ta.remove();
+    }
+    if ($("structure").open) $("structure").close();
+    setStatus(`copied ${t} — paste it into a pop-up's SQL`);
+  },
+  ddl: path => openStructure(path, true),
+  onToggle: () => { placeSteps(); atFit ? fit() : applyView(); },   // the stage got narrower or wider
+  foot: "Click a table for its columns; double-click it to copy its name. <b>Info</b> shows its structure; <b>DDL</b> its CREATE statement.",
+});
+$("structInsert").textContent = "Copy name";
+$("structInsert").title = "Copy the table's name, to paste into a pop-up's SQL";
+
 // ── Start ────────────────────────────────────────────────────────────────────
 drawPills();
 placeSteps();
@@ -969,6 +1075,7 @@ fit();
 (async () => {
   try {
     await ensureSession();
+    catalogReload();
     sql = await api("/api/pipeline/sql");
     await poll();
   } catch (e) { setStatus("could not connect: " + e.message.split("\n")[0], true); }

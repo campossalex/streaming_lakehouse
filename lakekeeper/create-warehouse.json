@@ -1,5 +1,5 @@
 {
-  "warehouse-name": "warehouse",
+  "warehouse-name": "lakehouse",
   "storage-profile": {
     "type": "s3",
     "bucket": "warehouse",

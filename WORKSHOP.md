@@ -438,11 +438,11 @@ Give the tiering service a minute to complete its first round. Then open
 **SQL** in the top toolbar to open an editor, and run:
 
 ```sql
-SHOW TABLES FROM warehouse.orders;
+SHOW TABLES FROM lakehouse.orders;
 ```
 
 You should see `orders_enriched`. Open **Lakekeeper** to browse the same catalog visually
-— the `warehouse` warehouse, its `orders` namespace, and the table Fluss just tiered — and
+— the `lakehouse` warehouse, its `orders` namespace, and the table Fluss just tiered — and
 the **MinIO Console** to see the actual files, under
 `warehouse/lakehouse/orders/orders_enriched/`: `data/` holds Parquet, `metadata/` the
 Iceberg snapshots and manifests.
@@ -520,7 +520,7 @@ see them again from Trino in the next step.
 Switch to **CloudBeaver** and run:
 
 ```sql
-SELECT * FROM warehouse.orders.orders_enriched LIMIT 20;
+SELECT * FROM lakehouse.orders.orders_enriched LIMIT 20;
 ```
 
 This is the same data — but Trino has no idea Fluss or Flink exist. It reads plain
@@ -529,7 +529,7 @@ it sees only the Iceberg side: run
 
 ```sql
 SELECT COUNT(*) AS events, MAX(event_time) AS latest_event
-FROM warehouse.orders.orders_enriched;
+FROM lakehouse.orders.orders_enriched;
 ```
 
 and you get the `$lake` numbers from Step 15 (or newer ones, if a tiering commit has
@@ -548,7 +548,7 @@ SELECT
   category,
   COUNT(*)      AS orders,
   SUM(amount)   AS revenue
-FROM warehouse.orders.orders_enriched
+FROM lakehouse.orders.orders_enriched
 WHERE status = 'DELIVERED'
 GROUP BY product_name, category
 ORDER BY revenue DESC;
@@ -584,7 +584,7 @@ SET 'execution.runtime-mode' = 'streaming';
 
 ```sql
 SELECT snapshot_id, committed_at, summary['added-records'] AS added_records
-FROM warehouse.orders."orders_enriched$snapshots"
+FROM lakehouse.orders."orders_enriched$snapshots"
 ORDER BY committed_at;
 ```
 
@@ -592,7 +592,7 @@ Copy an older `snapshot_id`, substitute it below, and run it in **CloudBeaver**:
 
 ```sql
 SELECT COUNT(*) AS events_at_that_point
-FROM warehouse.orders.orders_enriched FOR VERSION AS OF 1234567890123456789;
+FROM lakehouse.orders.orders_enriched FOR VERSION AS OF 1234567890123456789;
 ```
 
 You get the row count as it was at that exact snapshot — a question Fluss's live tables
@@ -779,10 +779,10 @@ SET ('table.datalake.enabled' = 'true', 'table.datalake.freshness' = '30s');
 Give the tiering service a minute, then from **CloudBeaver**:
 
 ```sql
-SELECT * FROM warehouse.orders.order_status LIMIT 20;
+SELECT * FROM lakehouse.orders.order_status LIMIT 20;
 
 SELECT status, COUNT(*) AS orders
-FROM warehouse.orders.order_status
+FROM lakehouse.orders.order_status
 GROUP BY status;
 ```
 
@@ -790,6 +790,6 @@ You're looking at the *current* state of every order — one row per `order_id` 
 entirely out of Iceberg, independent of Fluss. The upsert semantics survive the trip:
 each tiering commit writes the new row versions plus Iceberg **row-level delete files**
 that retire the old ones. Look at the `operation` column of
-`warehouse.orders."order_status$snapshots"` — it says `overwrite`, not `append` — and at
-`warehouse.orders."order_status$files"`, where `content` 1 and 2 are the position- and
+`lakehouse.orders."order_status$snapshots"` — it says `overwrite`, not `append` — and at
+`lakehouse.orders."order_status$files"`, where `content` 1 and 2 are the position- and
 equality-delete files.

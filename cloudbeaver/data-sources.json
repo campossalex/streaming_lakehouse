@@ -5,19 +5,42 @@
       "provider": "generic",
       "driver": "trino_jdbc",
       "name": "Trino — Lakehouse",
-      "description": "Iceberg tables tiered by Fluss, catalogued by Lakekeeper. Query them as warehouse.orders.*",
+      "description": "Iceberg tables tiered by Fluss, catalogued by Lakekeeper. Query them as lakehouse.orders.*",
       "save-password": true,
       "show-system-objects": false,
       "configuration": {
         "host": "trino",
         "port": "8080",
-        "database": "warehouse",
-        "url": "jdbc:trino://trino:8080/warehouse",
+        "database": "lakehouse",
+        "url": "jdbc:trino://trino:8080/lakehouse",
         "configurationType": "MANUAL",
         "type": "dev",
         "auth-model": "native",
         "auth-properties": {
           "user": "workshop"
+        }
+      }
+    },
+    "postgres-orders": {
+      "provider": "postgresql",
+      "driver": "postgres-jdbc",
+      "name": "PostgreSQL — orders",
+      "description": "The workshop's PostgreSQL: product_catalog (the CDC source, edit a row to watch it reach product_lookup) and revenue_5m (written by revenue-analytics-sink).",
+      "save-password": true,
+      "show-system-objects": false,
+      "configuration": {
+        "host": "postgres",
+        "port": "5432",
+        "database": "orders",
+        "url": "jdbc:postgresql://postgres:5432/orders",
+        "configurationType": "MANUAL",
+        "type": "dev",
+        "auth-model": "native",
+        "user": "root",
+        "password": "admin1",
+        "auth-properties": {
+          "user": "root",
+          "password": "admin1"
         }
       }
     }

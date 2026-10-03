@@ -370,7 +370,7 @@
           <tr><td>Kafka</td><td><code class="host" data-port="19092"></code></td><td><code>redpanda:9092</code></td><td>—</td></tr>
           <tr><td>Fluss coordinator</td><td><code class="host" data-port="9123"></code></td><td><code>coordinator-server:9123</code></td><td>—</td></tr>
           <tr><td>PostgreSQL <code>orders</code></td><td><code class="host" data-port="5432"></code></td><td><code>postgres:5432</code></td><td><code>root</code> / <code>admin1</code> · CDC: <code>cdc_user</code> / <code>admin1</code></td></tr>
-          <tr><td>Iceberg REST catalog</td><td><code class="host" data-port="8181" data-suffix="/catalog"></code></td><td><code>http://lakekeeper:8181/catalog</code></td><td>warehouse <code>warehouse</code></td></tr>
+          <tr><td>Iceberg REST catalog</td><td><code class="host" data-port="8181" data-suffix="/catalog"></code></td><td><code>http://lakekeeper:8181/catalog</code></td><td>warehouse <code>lakehouse</code></td></tr>
           <tr><td>MinIO S3 API</td><td><code class="host" data-port="9000"></code></td><td><code>http://minio:9000</code></td><td><code>admin</code> / <code>password</code></td></tr>
           <tr><td>Flink SQL Gateway (REST)</td><td><code class="host" data-port="8083"></code></td><td><code>http://sql-gateway:8083</code></td><td>—</td></tr>
         </tbody>
@@ -513,7 +513,7 @@ const TABLES = {
       ["Written by", "<code>product-enrichment</code> (a lookup join, so insert-only)"],
       ["Read by", "the tiering service, <code>revenue-analytics-sink</code>, your SELECTs"],
       ["Tiering", "enabled with <code>'table.datalake.enabled' = 'true'</code>, freshness <code>30s</code>"],
-      ["Iceberg copy", "<code>warehouse.orders.orders_enriched</code> in Trino — the same columns plus <code>__bucket</code>, <code>__offset</code>, <code>__timestamp</code>"],
+      ["Iceberg copy", "<code>lakehouse.orders.orders_enriched</code> in Trino — the same columns plus <code>__bucket</code>, <code>__offset</code>, <code>__timestamp</code>"],
       ["Union read", "once tiered, a Flink SELECT reads history from Iceberg and the freshest rows from Fluss"],
       ["Iceberg-only view", "<code>fluss.orders.`orders_enriched$lake`</code>; snapshots in <code>`orders_enriched$lake$snapshots`</code>"],
       ["Lab step", "Lab 2, Step 9 · tiered in Lab 3, Step 11"],

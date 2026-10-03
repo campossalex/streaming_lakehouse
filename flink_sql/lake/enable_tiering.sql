@@ -3,7 +3,7 @@
 --
 -- Not a job: an ALTER TABLE is a metadata change in Fluss. The tiering service
 -- (tiering.sh — one Flink job shared by every table) picks the table up on its next
--- round and starts committing it to Iceberg as warehouse.orders.<table>.
+-- round and starts committing it to Iceberg as lakehouse.orders.<table>.
 --
 -- table.datalake.freshness is the target lag between Fluss and Iceberg. The tiering job
 -- commits on Flink checkpoints, so the cluster's 30s checkpoint interval

@@ -624,8 +624,11 @@ def pipeline_sql():
     catalog = section("ddl/01_fluss.sql", "Step 1:")
     database = "CREATE DATABASE IF NOT EXISTS fluss.orders;\n"
     view = lambda t, note: f"-- {note}\nSELECT * FROM {t};\n"
-    lake_view = next(b for t, b in load_sections(os.path.join(SQL_DIR, "explore.sql"))
-                     if t.startswith("Lab 4, Step 15: one table"))
+    explore = load_sections(os.path.join(SQL_DIR, "explore.sql"))
+    union_view = next(b for t, b in explore if t.startswith("Lab 4, Step 15: one table"))
+    snapshots = next(b for t, b in explore if t.startswith("Lab 4, Step 18:"))
+    iceberg_catalog = next(b for t, b in explore if t.startswith("Bonus: Iceberg's own catalog"))
+    time_travel = next(b for t, b in explore if t.startswith("Bonus: time travel"))
     enable = split_statements(read_sql("lake/enable_tiering.sql"))[0]
     return jsonify({
         "nodes": {
@@ -643,7 +646,10 @@ def pipeline_sql():
                                    "SET 'execution.runtime-mode' = 'batch';\n"
                                    "SELECT * FROM postgres.orders.revenue_5m ORDER BY window_start DESC, category;\n"
                                    "SET 'execution.runtime-mode' = 'streaming';\n"},
-            "lake": {"view": "-- orders_enriched in Iceberg ($lake) next to the union read (Iceberg + Fluss).\n" + lake_view},
+            "lake": {"view": "-- orders_enriched in Iceberg, through Fluss's $lake view: its snapshots.\n" + snapshots},
+            "iceberg_flink": {"create": "-- Lab 4, Step 18 bonus: Lakekeeper as a Flink catalog of its own.\n" + iceberg_catalog,
+                              "view": "-- Lab 4, Step 18 bonus: time travel, read by Flink straight from Iceberg.\n" + time_travel},
+            "union": {"view": "-- The union read: Iceberg's history plus Fluss's fresh rows, next to Iceberg alone.\n" + union_view},
         },
         "edges": {
             **{e: {"sql": without_header(read_sql(spec["file"])) + RESET_NAME.lstrip("\n")} for e, spec in EDGES.items()},
@@ -764,7 +770,7 @@ def lake_table():
     """orders_enriched's Iceberg table metadata from Lakekeeper, or None if it has none."""
     global lake_prefix
     if lake_prefix is None:
-        cfg = requests.get(f"{LAKEKEEPER}/catalog/v1/config", params={"warehouse": "warehouse"}, timeout=10).json()
+        cfg = requests.get(f"{LAKEKEEPER}/catalog/v1/config", params={"warehouse": "lakehouse"}, timeout=10).json()
         lake_prefix = (cfg.get("overrides") or {}).get("prefix") or (cfg.get("defaults") or {}).get("prefix")
     r = requests.get(f"{LAKEKEEPER}/catalog/v1/{lake_prefix}/namespaces/orders/tables/orders_enriched", timeout=10)
     return r.json().get("metadata") if r.ok else None
@@ -879,11 +885,13 @@ def pipeline_status(session):
             pass
     if not exists["orders_enriched"]:
         tiering_on = False
-    snapshot, files = None, None
+    snapshot, files, first_snapshot = None, None, None
     try:
         meta = lake_table() if tiering_on else None
         if meta:
             snapshot = meta.get("current-snapshot-id")
+            snaps = sorted(meta.get("snapshots") or [], key=lambda x: x.get("timestamp-ms", 0))
+            first_snapshot = str(snaps[0]["snapshot-id"]) if snaps else None
             files = parquet_count(meta["location"]) if meta.get("location") else None
     except (requests.RequestException, ValueError, KeyError, ET.ParseError):
         pass
@@ -891,6 +899,15 @@ def pipeline_status(session):
     nodes["tiering"] = {"state": "live" if tjob == "RUNNING" else "starting" if tjob else "ready"}
     nodes["lake"] = {"state": "live" if snapshot else "starting" if tiering_on and tjob == "RUNNING"
                      else "ready" if tiering_on else "inactive"}
+    # Flink reading Iceberg through its own catalog (Lakekeeper registered as `iceberg`).
+    # firstSnapshot fills the time-travel query's placeholder with a real snapshot id.
+    ice = "iceberg" in catalogs
+    nodes["iceberg_flink"] = {"exists": ice, "firstSnapshot": first_snapshot,
+                              "state": "inactive" if not ice else "live" if snapshot else "ready"}
+    # The union read, a consumer: possible as soon as orders_enriched exists (from Fluss
+    # alone), and a real union of both tiers once Iceberg has data.
+    nodes["union"] = {"exists": exists["orders_enriched"], "state":
+                      "inactive" if not exists["orders_enriched"] else "live" if snapshot else "ready"}
     edges["tiering"] = {"state": "running" if tiering_on else "idle", "jobs": [],
                         "ready": exists["orders_enriched"]}
     edges["commits"] = {"state": "running" if snapshot and tjob == "RUNNING" else "idle", "jobs": []}

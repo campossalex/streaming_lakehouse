@@ -24,7 +24,7 @@ How the environment is built and why, for whoever runs or changes it. To deploy 
                   Service (tiering.sh)         ▼          ▼   (TUMBLE 5 min)
                                                │   PostgreSQL revenue_5m ──► Grafana
                                                ▼
-               Iceberg  warehouse.orders.orders_enriched
+               Iceberg  lakehouse.orders.orders_enriched
                ├─ metadata ── Lakekeeper (REST catalog) ── catalog-db (Postgres)
                └─ Parquet ─── MinIO  s3://warehouse/lakehouse/
                                                │
@@ -67,7 +67,7 @@ docker compose exec sql-client /opt/submit.sh revenue status
 docker compose exec sql-client /opt/flink/bin/sql-client.sh -i /opt/sql/ddl/02_sources.sql
 
 # Trino from a terminal
-docker compose exec trino trino --catalog warehouse --schema orders
+docker compose exec trino trino --catalog lakehouse --schema orders
 ```
 
 `submit.sh` concatenates `flink_sql/ddl/*.sql` into one init file, loads it with `-i`,
@@ -191,7 +191,7 @@ want to submit another job that reads Kafka or CDC.
 | Versions | Flink 1.20 (`apache/flink:1.20-java17`), Fluss 0.9.1-incubating, Iceberg 1.10.1 — the same versions the VVP edition's tiering setup uses |
 | Fluss config | `FLUSS_PROPERTIES` env var, appended to `server.yaml` by the image's entrypoint. Not a bind-mounted `server.yaml`: the entrypoint edits that file in place with `sed -i` |
 | Fluss remote storage | A shared named volume at `/fluss/remote-data`, not `s3://` — see below |
-| Iceberg catalog | Lakekeeper warehouse `warehouse`, `sts-enabled: false`, `remote-signing-enabled: false`, static MinIO keys everywhere |
+| Iceberg catalog | Lakekeeper warehouse `lakehouse`, `sts-enabled: false`, `remote-signing-enabled: false`, static MinIO keys everywhere |
 | Tiering service | `fluss-flink-tiering` JAR via `flink run -d` from the `jobmanager` container, so it inherits the cluster's 30s checkpoint interval — it commits to Iceberg on checkpoints |
 | Iceberg plugin in Fluss | The image's `plugins/iceberg/` has `fluss-lake-iceberg` but not S3FileIO; the entrypoints copy `iceberg-aws`, `iceberg-aws-bundle` and `failsafe` in from `lib/` |
 | Hadoop | Trino's relocated `hadoop-apache`, not `flink-shaded-hadoop-2-uber` — see below |
@@ -263,7 +263,7 @@ and resubmit: the recreated JobManager has no jobs.
 **`VerifyError` mentioning `S3V4RestSignerClient` at the first commit.** The Lakekeeper
 warehouse was created with remote signing enabled. It must be `false`, as in
 `lakekeeper/create-warehouse.json`; check with
-`curl -s 'localhost:8181/catalog/v1/config?warehouse=warehouse' | jq .overrides`.
+`curl -s 'localhost:8181/catalog/v1/config?warehouse=lakehouse' | jq .overrides`.
 
 **The CDC job fails with `replication slot ... is active`.** Only one reader per slot:
 another `pgcdc-to-fluss` is already running, possibly one an attendee submitted. Cancel

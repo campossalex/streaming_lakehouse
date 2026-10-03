@@ -191,6 +191,6 @@ Replace `localhost` with the instance's address when running on AWS.
 | Kafka | `localhost:19092` | `redpanda:9092` | — |
 | Fluss coordinator | `localhost:9123` | `coordinator-server:9123` | — |
 | PostgreSQL, database `orders` | `localhost:5432` | `postgres:5432` | `root` / `admin1`; CDC user `cdc_user` / `admin1` |
-| Iceberg REST catalog | `http://localhost:8181/catalog` | `http://lakekeeper:8181/catalog` | warehouse `warehouse` |
+| Iceberg REST catalog | `http://localhost:8181/catalog` | `http://lakekeeper:8181/catalog` | warehouse `lakehouse` |
 | MinIO S3 API | `http://localhost:9000` | `http://minio:9000` | `admin` / `password` |
 | Flink SQL Gateway (REST) | `http://localhost:8083` | `http://sql-gateway:8083` | — |

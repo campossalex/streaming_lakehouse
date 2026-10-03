@@ -80,7 +80,7 @@ print_manual_steps() {
   4. Lab 4 — query the lake from Trino in CloudBeaver: http://localhost:8978
      (the queries are in trino_sql/lakehouse.sql), or from a terminal:
 
-       docker compose exec trino trino --catalog warehouse --schema orders
+       docker compose exec trino trino --catalog lakehouse --schema orders
 
   5. Lab 5 and the bonus track:
 
@@ -157,9 +157,9 @@ wait_healthy trino 36
 
 # The warehouse is created by a one-shot container, so its absence here means that
 # container failed rather than that something is still starting.
-if ! curl -sf http://localhost:8181/management/v1/warehouse | grep -q '"name":"warehouse"'; then
+if ! curl -sf http://localhost:8181/management/v1/warehouse | grep -q '"name":"lakehouse"'; then
   echo ""
-  echo "ERROR: the 'warehouse' warehouse was not created in Lakekeeper."
+  echo "ERROR: the 'lakehouse' warehouse was not created in Lakekeeper."
   docker compose logs lakekeeper-warehouse --tail=20
   exit 1
 fi
