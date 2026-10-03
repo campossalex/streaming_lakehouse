@@ -22,7 +22,7 @@ This page is how to deploy it. Once it is up:
 | **Docker** | Docker Engine with **Compose v2 ≥ 2.20** | `docker compose version` to check. |
 | **Tools** | `bash`, `curl`, `jq`, `git` | `start.sh` uses `curl` and `jq`. |
 | **Internet access** | On the first run | Images from Docker Hub and quay.io, JARs from Maven Central, Python packages from PyPI. |
-| **Free ports** | 80, 3000, 5432, 8080–8084, 8181, 8978, 9000, 9001, 9123, 19092 | Stop any other Docker Compose stack using them first. |
+| **Free ports** | 80, 3000, 5432, 5433, 8080–8084, 8181, 8978, 9000, 9001, 9123, 19092 | Stop any other Docker Compose stack using them first. |
 
 Images exist for both x86_64 and arm64 (Apple Silicon, AWS Graviton); the stack has been
 tested on Apple Silicon and is built for x86_64 EC2 instances.
@@ -133,7 +133,7 @@ to `0.0.0.0/0`.** Allow them only from your own IP, or the venue's egress range:
 | 8082 | Kafka Console | Attendees |
 | 3000 | Grafana | Attendees |
 | 8080 | Trino Web UI | Attendees (optional) |
-| 5432, 8083, 9000, 9123, 19092 | PostgreSQL, SQL Gateway, S3 API, Fluss, Kafka | **Nobody** — the containers reach each other on the internal Docker network; these are only for your own clients |
+| 5432, 5433, 8083, 9000, 9123, 19092 | PostgreSQL (shop, dwh), SQL Gateway, S3 API, Fluss, Kafka | **Nobody** — the containers reach each other on the internal Docker network; these are only for your own clients |
 
 **Outbound.** The instance needs internet access on the first `./start.sh` (and on every
 `--reset`, for the Python packages): Docker Hub, `quay.io`, Maven Central, PyPI,
@@ -190,7 +190,8 @@ Replace `localhost` with the instance's address when running on AWS.
 |---|---|---|---|
 | Kafka | `localhost:19092` | `redpanda:9092` | — |
 | Fluss coordinator | `localhost:9123` | `coordinator-server:9123` | — |
-| PostgreSQL, database `orders` | `localhost:5432` | `postgres:5432` | `root` / `admin1`; CDC user `cdc_user` / `admin1` |
+| PostgreSQL — the shop's source database `shop` (`product_catalog`) | `localhost:5432` | `postgres:5432` | `shop_user` / `admin1`; CDC user `cdc_user` / `admin1` |
+| PostgreSQL — the data warehouse `dwh` (`revenue_5m`) | `localhost:5433` | `postgres-dwh:5432` | `dwh_user` / `admin1` |
 | Iceberg REST catalog | `http://localhost:8181/catalog` | `http://lakekeeper:8181/catalog` | warehouse `lakehouse` |
 | MinIO S3 API | `http://localhost:9000` | `http://minio:9000` | `admin` / `password` |
 | Flink SQL Gateway (REST) | `http://localhost:8083` | `http://sql-gateway:8083` | — |

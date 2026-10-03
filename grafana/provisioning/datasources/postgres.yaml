@@ -5,14 +5,14 @@ datasources:
     uid: lakehouse_dwh
     type: grafana-postgresql-datasource
     access: proxy
-    url: postgres:5432
-    database: orders
-    user: root
+    url: postgres-dwh:5432
+    database: dwh
+    user: dwh_user
     secureJsonData:
       password: admin1
     jsonData:
       sslmode: disable
-      database: orders
+      database: dwh
       postgresVersion: 1500
       timescaledb: false
     isDefault: true

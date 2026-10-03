@@ -583,7 +583,7 @@ NODES = {
     "orders_log":      {"table": ("fluss", "orders", "orders_log"), "feed": "kafka_to_fluss"},
     "product_lookup":  {"table": ("fluss", "orders", "product_lookup"), "feed": "pgcdc_to_fluss"},
     "orders_enriched": {"table": ("fluss", "orders", "orders_enriched"), "feed": "enrichment"},
-    "revenue_5m":      {"table": ("postgres", "orders", "revenue_5m"), "listed": "public.revenue_5m",
+    "revenue_5m":      {"table": ("postgres", "dwh", "revenue_5m"), "listed": "public.revenue_5m",
                         "feed": "revenue", "precreated": True},
 }
 EDGES = {
@@ -592,7 +592,7 @@ EDGES = {
     "enrichment":     {"from": ["orders_log", "product_lookup"], "to": "orders_enriched", "file": "jobs/30_enrichment.sql"},
     "revenue":        {"from": ["orders_enriched"], "to": "revenue_5m", "file": "jobs/50_revenue.sql"},
 }
-# Pre-created on page load: revenue_5m already exists in PostgreSQL, so Flink only needs
+# Pre-created on page load: revenue_5m already exists in the warehouse (postgres-dwh), so Flink only needs
 # the postgres catalog. The two sources are not: attendees create them from their boxes.
 BOOTSTRAP_FILES = ["ddl/03_postgres.sql"]
 
@@ -642,9 +642,9 @@ def pipeline_sql():
                                "view": view("fluss.orders.product_lookup", "One row per product, kept in sync with PostgreSQL by pgcdc-to-fluss.")},
             "orders_enriched": {"create": catalog + "\n" + database + "\n" + section("ddl/01_fluss.sql", "Step 9:"),
                                 "view": view("fluss.orders.orders_enriched", "Order events joined with product details. Once tiered, this is a union read: Iceberg first, then Fluss.")},
-            "revenue_5m": {"view": "-- revenue_5m in PostgreSQL, through the postgres catalog: a bounded read, newest window first.\n"
+            "revenue_5m": {"view": "-- revenue_5m in the data warehouse (postgres-dwh), through the postgres catalog: a bounded read, newest window first.\n"
                                    "SET 'execution.runtime-mode' = 'batch';\n"
-                                   "SELECT * FROM postgres.orders.revenue_5m ORDER BY window_start DESC, category;\n"
+                                   "SELECT * FROM postgres.dwh.revenue_5m ORDER BY window_start DESC, category;\n"
                                    "SET 'execution.runtime-mode' = 'streaming';\n"},
             "lake": {"view": "-- orders_enriched in Iceberg, through Fluss's $lake view: its snapshots.\n" + snapshots},
             "iceberg_flink": {"create": "-- Lab 4, Step 18 bonus: Lakekeeper as a Flink catalog of its own.\n" + iceberg_catalog,
@@ -672,7 +672,7 @@ def pipeline_bootstrap(session):
 
 # Which table a job writes, from its plan. Matching jobs to arrows by what they write, not
 # by name, keeps an arrow lit when an attendee edits pipeline.name in the pop-up. Fluss
-# sinks print "Sink(orders.orders_log)", JDBC ones "Sink(table=[postgres.orders.revenue_5m]".
+# sinks print "Sink(orders.orders_log)", JDBC ones "Sink(table=[postgres.dwh.revenue_5m]".
 SINK_FULL = re.compile(r"Sink\(table=\[([^\]]+)\]")
 SINK_SHORT = re.compile(r"Sink\(([\w$.`]+)\)")
 plan_sinks = {}
@@ -831,7 +831,7 @@ def pipeline_status(session):
         listed = {
             "default_catalog": names(session, "SHOW TABLES IN `default_catalog`.`default_database`"),
             "fluss": names(session, "SHOW TABLES IN `fluss`.`orders`") if "fluss" in catalogs else set(),
-            "postgres": names(session, "SHOW TABLES IN `postgres`.`orders`") if "postgres" in catalogs else set(),
+            "postgres": names(session, "SHOW TABLES IN `postgres`.`dwh`") if "postgres" in catalogs else set(),
         }
     except requests.RequestException as e:
         return json_error(e)

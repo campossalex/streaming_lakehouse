@@ -96,7 +96,7 @@ print_manual_steps() {
        docker compose exec redpanda rpk topic consume orders_log --num 3
 
   Change a product and watch CDC carry it through to Fluss:
-       docker compose exec postgres psql -U root -d orders -c \
+       docker compose exec postgres psql -U root -d shop -c \
          "UPDATE product_catalog SET unit_price = 1.99 WHERE product_id = 'PRD-00001';"
 
   What Fluss has written to MinIO:
@@ -149,6 +149,7 @@ wait_healthy() {
 
 wait_healthy redpanda 24
 wait_healthy postgres 24
+wait_healthy postgres-dwh 24
 wait_healthy lakekeeper 24
 wait_healthy coordinator-server 36
 wait_healthy jobmanager 24
@@ -219,7 +220,8 @@ if [ "$SERVICES_ONLY" = "1" ]; then
   Grafana             →  http://localhost:3000   (empty until Lab 5)
 
   Kafka (from host):      localhost:19092   topic orders_log
-  PostgreSQL (from host): localhost:5432    root/admin1   db orders
+  PostgreSQL shop (from host): localhost:5432   shop_user/admin1   db shop
+  PostgreSQL dwh  (from host): localhost:5433   dwh_user/admin1    db dwh
 BANNER
   print_manual_steps
   echo "  Stop everything:  docker compose down -v"
@@ -269,7 +271,8 @@ cat <<'BANNER'
   Grafana             →  http://localhost:3000   first 5-minute window in ~6 minutes
 
   Kafka (from host):      localhost:19092   topic orders_log
-  PostgreSQL (from host): localhost:5432    root/admin1   db orders
+  PostgreSQL shop (from host): localhost:5432   shop_user/admin1   db shop
+  PostgreSQL dwh  (from host): localhost:5433   dwh_user/admin1    db dwh
 
   Start again without submitting anything:
     ./start.sh --reset --services-only

@@ -369,7 +369,8 @@
         <tbody>
           <tr><td>Kafka</td><td><code class="host" data-port="19092"></code></td><td><code>redpanda:9092</code></td><td>—</td></tr>
           <tr><td>Fluss coordinator</td><td><code class="host" data-port="9123"></code></td><td><code>coordinator-server:9123</code></td><td>—</td></tr>
-          <tr><td>PostgreSQL <code>orders</code></td><td><code class="host" data-port="5432"></code></td><td><code>postgres:5432</code></td><td><code>root</code> / <code>admin1</code> · CDC: <code>cdc_user</code> / <code>admin1</code></td></tr>
+          <tr><td>PostgreSQL <code>shop</code> (source)</td><td><code class="host" data-port="5432"></code></td><td><code>postgres:5432</code></td><td><code>shop_user</code> / <code>admin1</code> · CDC: <code>cdc_user</code> / <code>admin1</code></td></tr>
+          <tr><td>PostgreSQL <code>dwh</code> (warehouse)</td><td><code class="host" data-port="5433"></code></td><td><code>postgres-dwh:5432</code></td><td><code>dwh_user</code> / <code>admin1</code></td></tr>
           <tr><td>Iceberg REST catalog</td><td><code class="host" data-port="8181" data-suffix="/catalog"></code></td><td><code>http://lakekeeper:8181/catalog</code></td><td>warehouse <code>lakehouse</code></td></tr>
           <tr><td>MinIO S3 API</td><td><code class="host" data-port="9000"></code></td><td><code>http://minio:9000</code></td><td><code>admin</code> / <code>password</code></td></tr>
           <tr><td>Flink SQL Gateway (REST)</td><td><code class="host" data-port="8083"></code></td><td><code>http://sql-gateway:8083</code></td><td>—</td></tr>
@@ -430,7 +431,7 @@ setInterval(probeAll, 15000);
 
 // ── Table structure panels ────────────────────────────────────────────────────
 // Kept in step with the DDL by hand: flink_sql/ddl/*.sql
-// and pg_streaming_lakehouse_ddl.sql. Columns are [name, type, note]; key: true marks the
+// and pg_shop_ddl.sql / pg_dwh_ddl.sql. Columns are [name, type, note]; key: true marks the
 // primary key.
 const STATUS = "PLACED · PAID · SHIPPED · DELIVERED · CANCELLED";
 const ORDER_COLS = [
@@ -463,7 +464,7 @@ const TABLES = {
     query: "SELECT * FROM orders_log_kafka;",
   },
   product_catalog: {
-    name: "public.product_catalog", kind: "PostgreSQL table · database orders",
+    name: "public.product_catalog", kind: "PostgreSQL table · the shop's source database, shop",
     about: "The product master data, seeded with 500 products. The source of truth that CDC replicates into Fluss.",
     cols: PRODUCT_COLS(["VARCHAR(20)", "VARCHAR(20)", "VARCHAR(255)", "VARCHAR(50)", "VARCHAR(100)", "NUMERIC(10, 2)", "NUMERIC(6, 2)", "NUMERIC(2, 1)", "TIMESTAMP"]),
     facts: [
@@ -473,7 +474,7 @@ const TABLES = {
       ["Read by", "<code>pgcdc-to-fluss</code>"],
       ["Lab step", "Lab 2, Step 7"],
     ],
-    query: "UPDATE product_catalog SET unit_price = 1.99\nWHERE product_id = 'PRD-00001';   -- in psql; watch it reach Fluss",
+    query: "UPDATE product_catalog SET unit_price = 1.99\nWHERE product_id = 'PRD-00001';   -- in CloudBeaver (PostgreSQL — shop) or psql; watch it reach Fluss",
   },
   orders_log: {
     name: "fluss.orders.orders_log", kind: "Fluss Log table · append-only · 3 buckets",
@@ -521,7 +522,7 @@ const TABLES = {
     query: "SELECT * FROM fluss.orders.orders_enriched;",
   },
   revenue_5m: {
-    name: "public.revenue_5m", kind: "PostgreSQL table · database orders · one row per 5-minute window and category",
+    name: "public.revenue_5m", kind: "PostgreSQL table · the data warehouse, dwh · one row per 5-minute window and category",
     about: "Order analytics for Grafana. Every order emits one event per status, so each measure counts a single status: revenue is what was booked (PLACED), delivered and cancelled revenue what was fulfilled and lost.",
     cols: [
       ["window_start", "TIMESTAMP", "", true], ["window_end", "TIMESTAMP", "", true], ["category", "VARCHAR(30)", "", true],
@@ -535,12 +536,12 @@ const TABLES = {
       ["unique_products", "BIGINT", "distinct, per category"],
     ],
     facts: [
-      ["Written by", "<code>revenue-analytics-sink</code> — <code>TUMBLE</code> over <code>orders_enriched</code>, upserted into <code>postgres.orders.revenue_5m</code> through the Postgres JDBC catalog"],
+      ["Written by", "<code>revenue-analytics-sink</code> — <code>TUMBLE</code> over <code>orders_enriched</code>, upserted into <code>postgres.dwh.revenue_5m</code> through the Postgres JDBC catalog"],
       ["Freshness", "a row is written when its window closes: 5 minutes, plus the 5 s watermark"],
       ["Read by", "Grafana, the <i>Order Analytics</i> dashboard"],
       ["Lab step", "Lab 5, Step 19"],
     ],
-    query: "SELECT window_start, category, order_count, revenue, cancelled_count\nFROM revenue_5m ORDER BY window_start DESC LIMIT 10;   -- in psql",
+    query: "SELECT window_start, category, order_count, revenue, cancelled_count\nFROM revenue_5m ORDER BY window_start DESC LIMIT 10;   -- in CloudBeaver (PostgreSQL — dwh) or psql",
   },
 };
 

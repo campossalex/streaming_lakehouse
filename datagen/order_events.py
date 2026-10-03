@@ -16,7 +16,7 @@
 # this generator never talks to Fluss directly.
 #
 # product_id values reference the 500-row product_catalog seeded into
-# PostgreSQL by the environment setup (see ../pg_streaming_lakehouse_ddl.sql).
+# PostgreSQL by the environment setup (see ../pg_shop_ddl.sql).
 # The generator doesn't query Postgres for real prices — amount is a plausible
 # random order total, independent of the product's actual catalog price.
 

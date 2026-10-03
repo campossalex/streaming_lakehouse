@@ -1,7 +1,7 @@
 -- =====================================================================
 -- JOB: revenue-analytics-sink  (Lab 5, Step 19 — optional)
 --
---   fluss.orders.orders_enriched  ->  TUMBLE 5 min  ->  postgres.orders.revenue_5m  ->  Grafana
+--   fluss.orders.orders_enriched  ->  TUMBLE 5 min  ->  postgres.dwh.revenue_5m  ->  Grafana
 --
 -- One row per window and category. Each order emits an event per status it reaches,
 -- so every measure is scoped to one status with FILTER (WHERE ...): order_count and
@@ -23,7 +23,7 @@
 
 SET 'pipeline.name' = 'revenue-analytics-sink';
 
-INSERT INTO postgres.orders.revenue_5m
+INSERT INTO postgres.dwh.revenue_5m
 SELECT
   window_start,
   window_end,

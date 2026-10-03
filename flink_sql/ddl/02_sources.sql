@@ -37,9 +37,10 @@ CREATE TABLE IF NOT EXISTS orders_log_kafka (
 
 
 -- ------------------------------------ Step 7: the postgres-cdc source table
--- Snapshots product_catalog on startup, then streams every change. PostgreSQL was set
--- up for this by pg_streaming_lakehouse_ddl.sql: wal_level=logical, a replication user,
--- the slot and the publication named below.
+-- Snapshots product_catalog on startup, then streams every change. It reads the shop's
+-- source database (server `postgres`, database `shop`) as cdc_user, set up for this by
+-- pg_shop_ddl.sql: wal_level=logical, a replication user, the slot and the publication
+-- named below.
 CREATE TABLE IF NOT EXISTS product_catalog_cdc (
   `product_id`   STRING,
   `sku`          STRING,
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS product_catalog_cdc (
   'port'                      = '5432',
   'username'                  = 'cdc_user',
   'password'                  = 'admin1',
-  'database-name'             = 'orders',
+  'database-name'             = 'shop',
   'schema-name'               = 'public',
   'table-name'                = 'product_catalog',
   'slot.name'                 = 'flink_cdc_lakehouse_slot',

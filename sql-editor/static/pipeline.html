@@ -490,7 +490,7 @@ function drawPills() {
     p.dataset.action = action; p.dataset.target = target;
     p.innerHTML = `<rect x="${x}" y="${y}" width="${w}" height="20" rx="10"/><text x="${x + w / 2}" y="${y + 14}" text-anchor="middle"></text>`;
     p.querySelector("text").textContent = label;
-    const where = { redpanda: "the orders_log topic in Redpanda Console", cloudbeaver: "product_catalog in CloudBeaver (PostgreSQL — orders)" };
+    const where = { redpanda: "the orders_log topic in Redpanda Console", cloudbeaver: "product_catalog in CloudBeaver (PostgreSQL — shop)" };
     if (where[target]) {   // View source: a round icon button, a magnifying glass, with a tooltip
       p.querySelector("text").remove();
       p.insertAdjacentHTML("beforeend", `<circle class="glyph" cx="${x + 10}" cy="${y + 9}" r="4.2"/><path class="glyph" d="M${x + 13.1} ${y + 12.1} L${x + 16} ${y + 15}"/>`);
@@ -604,11 +604,11 @@ async function ensureSession() {
 // ── The pop-up ───────────────────────────────────────────────────────────────
 const ABOUT = {
   kafka: "The order events the generator is already publishing to the Kafka topic. Creating this table registers the topic in Flink as orders_log_kafka. It lives in the session's in-memory catalog: a new session needs it created again.",
-  product_catalog: "PostgreSQL's 500 products. Creating this table registers them in Flink as product_catalog_cdc, read through change data capture. It lives in the session's in-memory catalog: a new session needs it created again.",
+  product_catalog: "The shop's 500 products, in its own PostgreSQL database (shop). Creating this table registers them in Flink as product_catalog_cdc, read through change data capture as cdc_user. It lives in the session's in-memory catalog: a new session needs it created again.",
   orders_log: "A Fluss Log table: an ordered, append-only store of every order event, written by kafka-to-fluss.",
   product_lookup: "A Fluss primary-key table: one row per product, kept in sync with PostgreSQL by pgcdc-to-fluss.",
   orders_enriched: "A Fluss Log table of order events enriched with product details. The table that is tiered to Iceberg.",
-  revenue_5m: "A PostgreSQL table, pre-created, reached through the postgres JDBC catalog. revenue-analytics-sink upserts one row per 5-minute window and category; Grafana reads it.",
+  revenue_5m: "The data warehouse: a PostgreSQL server of its own (postgres-dwh, database dwh), separate from the shop's. revenue_5m is pre-created there and reached through the postgres JDBC catalog as dwh_user, which sees only the warehouse. revenue-analytics-sink upserts one row per 5-minute window and category; Grafana reads it.",
   lake: "orders_enriched as an Iceberg table, catalogued by Lakekeeper: one snapshot per tiering commit, read through Fluss's $lake view.",
   iceberg_flink_create: "Registers Lakekeeper — the Iceberg REST catalog — in Flink as the catalog iceberg, so Flink reads the Iceberg tables directly, with no Fluss in the path. It is kept by the CatalogStore, like fluss and postgres: it survives a new session. The SHOW TABLES after it lists what Lakekeeper holds; it fails until tiering has created the orders namespace.",
   iceberg_flink: "Flink reading orders_enriched straight from Iceberg, through the iceberg catalog: no Fluss in the path. Iceberg keeps every snapshot, so the query can travel back to one with an OPTIONS('snapshot-id') hint. The oldest snapshot's id is filled in for you.",

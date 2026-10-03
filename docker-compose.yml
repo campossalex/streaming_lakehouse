@@ -23,7 +23,8 @@ name: streaming-lakehouse-oss
 #   9123  — Fluss coordinator
 #   8082  — Redpanda Console
 #   19092 — Redpanda Kafka (external listener; redpanda:9092 inside the network)
-#   5432  — PostgreSQL `orders` (product_catalog CDC source, revenue_5m sink)
+#   5432  — PostgreSQL `shop` (product_catalog, the CDC source)
+#   5433  — PostgreSQL `dwh` (revenue_5m, the data warehouse)
 #   9000  — MinIO S3 API
 #   9001  — MinIO Console (see the Parquet and metadata files Fluss tiers)
 #   8181  — Lakekeeper (Iceberg REST catalog + its web UI at /ui)
@@ -462,7 +463,10 @@ services:
     networks:
       - lakehouse-net
 
-  # ── PostgreSQL `orders`: the product_catalog CDC source and the revenue_5m sink ──
+  # ── PostgreSQL ×2: the shop's source database and the data warehouse ─────────
+  # Two servers on purpose, so they feel like the two different systems they stand for.
+  # `postgres` (database `shop`): product_catalog, the CDC source — pg_shop_ddl.sql.
+  # `postgres-dwh` (database `dwh`): revenue_5m, written by Lab 5 — pg_dwh_ddl.sql.
 
   postgres:
     image: postgres:15
@@ -470,7 +474,7 @@ services:
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: admin1
-      POSTGRES_DB: orders
+      POSTGRES_DB: shop
       TZ: UTC
     # wal_level=logical is what the postgres-cdc connector needs. It is a postmaster
     # setting, so it goes on the command line; the init scripts run under a temporary
@@ -489,13 +493,34 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./datagen/data/products.csv:/products.csv:ro
-      - ./pg_streaming_lakehouse_ddl.sql:/docker-entrypoint-initdb.d/01_streaming_lakehouse.sql:ro
+      - ./pg_shop_ddl.sql:/docker-entrypoint-initdb.d/01_shop.sql:ro
     networks:
       - lakehouse-net
     healthcheck:
       # -h forces TCP. Over the default unix socket this reports ready during initdb,
       # while the temporary init server is still loading products.csv.
-      test: ["CMD-SHELL", "pg_isready -h postgres -U root -d orders"]
+      test: ["CMD-SHELL", "pg_isready -h postgres -U root -d shop"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres-dwh:
+    image: postgres:15
+    hostname: postgres-dwh
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: admin1
+      POSTGRES_DB: dwh
+      TZ: UTC
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-dwh-data:/var/lib/postgresql/data
+      - ./pg_dwh_ddl.sql:/docker-entrypoint-initdb.d/01_dwh.sql:ro
+    networks:
+      - lakehouse-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h postgres-dwh -U root -d dwh"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -779,7 +804,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
-      postgres:
+      postgres-dwh:
         condition: service_healthy
     networks:
       - lakehouse-net
@@ -790,6 +815,7 @@ networks:
 
 volumes:
   postgres-data:
+  postgres-dwh-data:
   catalog-db-data:
   minio-data:
   cloudbeaver-workspace:

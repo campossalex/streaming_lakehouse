@@ -1,9 +1,10 @@
 -- =====================================================================
 -- The PostgreSQL catalog  (Lab 5 Step 19)
 --
--- A JDBC catalog exposes the tables of PostgreSQL's `orders` database to Flink as
--- postgres.orders.<table>, with their columns and primary keys read from PostgreSQL
--- itself. Lab 5 writes to postgres.orders.revenue_5m through it, so there is no sink
+-- A JDBC catalog exposes the tables of the data warehouse — its own PostgreSQL server,
+-- `postgres-dwh`, database `dwh` — to Flink as postgres.dwh.<table>, with their columns
+-- and primary keys read from PostgreSQL itself. Lab 5 writes to postgres.dwh.revenue_5m
+-- through it, as dwh_user (pg_dwh_ddl.sql), so there is no sink
 -- table to declare: revenue_5m's PRIMARY KEY (window_start, window_end, category) comes
 -- with it, and that key is what makes the JDBC sink upsert each window's row.
 --
@@ -19,8 +20,8 @@
 
 CREATE CATALOG IF NOT EXISTS postgres WITH (
   'type'             = 'jdbc',
-  'base-url'         = 'jdbc:postgresql://postgres:5432',
-  'default-database' = 'orders',
-  'username'         = 'root',
+  'base-url'         = 'jdbc:postgresql://postgres-dwh:5432',
+  'default-database' = 'dwh',
+  'username'         = 'dwh_user',
   'password'         = 'admin1'
 );

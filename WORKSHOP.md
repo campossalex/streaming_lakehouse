@@ -210,10 +210,11 @@ enrich the order stream with product details via a lookup join.
 
 ### Step 6: Create the product_lookup Fluss PK table
 
-PostgreSQL already has a `product_catalog` table with 500 realistic products (name,
-category, brand, price, cost, weight, rating, ...). Rather than re-typing that data into
-Fluss, you'll replicate it live via **Change Data Capture** — any insert or update in
-PostgreSQL shows up here automatically.
+The shop's operational database — PostgreSQL, database `shop` — already has a
+`product_catalog` table with 500 realistic products (name, category, brand, price, cost,
+weight, rating, ...). Rather than re-typing that data into Fluss, you'll replicate it live
+via **Change Data Capture** — any insert or update in the shop database shows up here
+automatically.
 
 Create a Fluss **Primary Key (PK) table** with the same shape as `product_catalog`:
 
@@ -262,7 +263,7 @@ CREATE TABLE IF NOT EXISTS product_catalog_cdc (
   'port'                      = '5432',
   'username'                  = 'cdc_user',
   'password'                  = 'admin1',
-  'database-name'             = 'orders',
+  'database-name'             = 'shop',
   'schema-name'               = 'public',
   'table-name'                = 'product_catalog',
   'slot.name'                 = 'flink_cdc_lakehouse_slot',
@@ -296,7 +297,7 @@ and settle at `500`, the number of products this e-commerce company sells.
 > Leave the count running and change a product in PostgreSQL from a terminal:
 >
 > ```bash
-> docker compose exec postgres psql -U root -d orders -c \
+> docker compose exec postgres psql -U root -d shop -c \
 >   "INSERT INTO product_catalog (product_id, product_name, category, unit_price)
 >    VALUES ('PRD-00501', 'Workshop Mug', 'Home & Kitchen', 12.00);"
 > ```
@@ -618,25 +619,26 @@ after the table's first snapshot, so a longer interval fails on a freshly tiered
 ### Step 19: Create a windowed order analytics job
 
 This job aggregates `orders_enriched` into 5-minute tumbling windows per product category
-and writes the results to PostgreSQL, where Grafana reads them. The table it writes to,
-`revenue_5m`, already exists in PostgreSQL — so instead of describing it to Flink column
-by column, register PostgreSQL as a **catalog**:
+and writes the results to the **data warehouse**, where Grafana reads them: a separate
+PostgreSQL server, `postgres-dwh`, database `dwh`. The table it writes to, `revenue_5m`,
+already exists there — so instead of describing it to Flink column by column, register the
+warehouse as a **catalog**:
 
 ```sql
 CREATE CATALOG IF NOT EXISTS postgres WITH (
   'type'             = 'jdbc',
-  'base-url'         = 'jdbc:postgresql://postgres:5432',
-  'default-database' = 'orders',
-  'username'         = 'root',
+  'base-url'         = 'jdbc:postgresql://postgres-dwh:5432',
+  'default-database' = 'dwh',
+  'username'         = 'dwh_user',
   'password'         = 'admin1'
 );
 ```
 
-Every table in the `orders` database is now visible as `postgres.orders.<table>`, with
-its columns and primary key read from PostgreSQL itself. Look at the sink:
+Every table in the `dwh` database is now visible as `postgres.dwh.<table>`, with its
+columns and primary key read from PostgreSQL itself. Look at the sink:
 
 ```sql
-SHOW CREATE TABLE postgres.orders.revenue_5m;
+SHOW CREATE TABLE postgres.dwh.revenue_5m;
 ```
 
 Note the `PRIMARY KEY (window_start, window_end, category)` at the end — it came from
@@ -649,7 +651,7 @@ Then the job:
 ```sql
 SET 'pipeline.name' = 'revenue-analytics-sink';
 
-INSERT INTO postgres.orders.revenue_5m
+INSERT INTO postgres.dwh.revenue_5m
 SELECT
   window_start,
   window_end,
@@ -688,7 +690,7 @@ the history in Iceberg, then continues from Fluss.
 ### Step 20: Explore the dashboard
 
 Open **Grafana** → **Dashboards** → **Streaming Lakehouse — Order Analytics**. It is
-already provisioned, wired to the `orders` database — nothing to import.
+already provisioned, wired to the `dwh` warehouse database — nothing to import.
 
 - **KPI row**: orders and revenue booked, average order value, revenue delivered, the
   cancellation rate, and how many distinct products sold in the last window.

@@ -21,25 +21,48 @@
         }
       }
     },
-    "postgres-orders": {
+    "postgres-shop": {
       "provider": "postgresql",
       "driver": "postgres-jdbc",
-      "name": "PostgreSQL — orders",
-      "description": "The workshop's PostgreSQL: product_catalog (the CDC source, edit a row to watch it reach product_lookup) and revenue_5m (written by revenue-analytics-sink).",
+      "name": "PostgreSQL — shop",
+      "description": "The shop's source database: product_catalog, read by the CDC source. Edit a product and watch the change reach product_lookup.",
       "save-password": true,
       "show-system-objects": false,
       "configuration": {
         "host": "postgres",
         "port": "5432",
-        "database": "orders",
-        "url": "jdbc:postgresql://postgres:5432/orders",
+        "database": "shop",
+        "url": "jdbc:postgresql://postgres:5432/shop",
         "configurationType": "MANUAL",
         "type": "dev",
         "auth-model": "native",
-        "user": "root",
+        "user": "shop_user",
         "password": "admin1",
         "auth-properties": {
-          "user": "root",
+          "user": "shop_user",
+          "password": "admin1"
+        }
+      }
+    },
+    "postgres-dwh": {
+      "provider": "postgresql",
+      "driver": "postgres-jdbc",
+      "name": "PostgreSQL — dwh",
+      "description": "The data warehouse: revenue_5m, written by revenue-analytics-sink and read by Grafana.",
+      "save-password": true,
+      "show-system-objects": false,
+      "configuration": {
+        "host": "postgres-dwh",
+        "port": "5432",
+        "database": "dwh",
+        "url": "jdbc:postgresql://postgres-dwh:5432/dwh",
+        "configurationType": "MANUAL",
+        "type": "dev",
+        "auth-model": "native",
+        "user": "dwh_user",
+        "password": "admin1",
+        "auth-properties": {
+          "user": "dwh_user",
           "password": "admin1"
         }
       }
