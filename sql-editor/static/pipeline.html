@@ -45,6 +45,24 @@
             overflow: hidden; text-overflow: ellipsis; }
   #status.bad { color: var(--err); }
   header a { color: var(--accent); font-size: 13px; text-decoration: none; }
+  /* The "Workshop" menu */
+  .wmenu { position: relative; }
+  #wmenuBtn { display: inline-flex; align-items: center; gap: 6px; }
+  #wmenuBtn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+  .wicon { width: 16px; height: 16px; flex: none; }
+  .wlist { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(380px, calc(100vw - 24px));
+           padding: 6px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+           box-shadow: 0 12px 36px rgba(0,0,0,.28); }
+  .wlist[hidden] { display: none; }
+  .wlist a { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 6px;
+             color: var(--fg); text-decoration: none; font-size: 13px; outline: none; }
+  .wlist a:hover, .wlist a:focus-visible { background: var(--stmt-bg); text-decoration: none; }
+  .wlist a:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+  .wlist .wicon { width: 20px; height: 20px; color: var(--muted); }
+  .wlist .wicon.mark { fill: var(--fg); opacity: .85; }
+  .wlist b { display: block; font-weight: 600; }
+  .wlist small { display: block; color: var(--muted); font-size: 12px; line-height: 1.35; }
+  .wlist .port { margin-left: auto; font: 11px var(--mono); color: var(--muted); }
   header a:hover { text-decoration: underline; }
   button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
            background: var(--panel); color: var(--fg); cursor: pointer; }
@@ -218,8 +236,12 @@
     <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>Catalog</button>
   <h1>Pipeline Builder</h1>
   <span id="status">connecting…</span>
-  <a id="toEditor" href="/">Flink SQL editor ↗</a>
-  <a id="toHome" href="#">Environment home ↗</a>
+  <div class="wmenu">
+    <button type="button" id="wmenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="wmenu">
+      <svg class="wicon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Workshop <span aria-hidden="true">▾</span></button>
+    <div class="wlist" id="wmenu" role="menu" aria-label="Workshop components" hidden></div>
+  </div>
   <button id="theme" type="button"></button>
 </header>
 
@@ -351,11 +373,11 @@
         <text class="title" x="1053" y="214" text-anchor="middle">MinIO</text>
         <text class="sub" x="1053" y="232" text-anchor="middle" id="minioFiles">Parquet + metadata</text>
       </g>
-      <g class="node" data-node="revenue_5m">
+      <g class="node" data-node="revenue_1m">
         <rect class="box" x="962" y="374" width="160" height="52" rx="6"/>
         <use class="icon" href="#i-postgres" x="968" y="390" width="20" height="20"/>
         <text class="title" x="1053" y="396" text-anchor="middle">PostgreSQL</text>
-        <text class="sub" x="1053" y="414" text-anchor="middle">revenue_5m</text>
+        <text class="sub" x="1053" y="414" text-anchor="middle">revenue_1m</text>
       </g>
       <g class="node" data-node="trino">
         <rect class="box" x="1202" y="56" width="160" height="52" rx="6"/>
@@ -451,7 +473,45 @@
 <script>
 const MAX_ROWS = 200;
 const host = location.hostname;
-$("toHome").href = `${location.protocol}//${host}/`;
+// ── The "Workshop" menu: every component of the environment, with its icon ────
+// Links are built from the host this page was opened on, like the homepage's, so they
+// work on localhost and on a remote VM alike. Icons: the diagram's own marks (#i-…), plus
+// three plain glyphs for the components that have none.
+const GLYPH = {
+  home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  code: '<path d="M8 8l-4 4 4 4"/><path d="M16 8l4 4-4 4"/><path d="M14 5l-4 14"/>',
+  db: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>',
+};
+const WORKSHOP = [
+  ["Environment home", "Every tool, its status, the connection details", 80, "/", { glyph: "home" }],
+  ["Flink SQL editor", "Write and run Flink SQL; the Catalog browser", 8084, "/", { glyph: "code" }],
+  ["Flink Web UI", "Running jobs, checkpoints, exceptions", 8081, "/", { mark: "flink" }],
+  ["Redpanda Console", "The Kafka topic orders_log and its messages", 8082, "/topics/orders_log", { mark: "kafka" }],
+  ["CloudBeaver", "SQL on Trino (the lakehouse) and PostgreSQL (shop, dwh)", 8978, "/", { glyph: "db" }],
+  ["Lakekeeper", "The Iceberg REST catalog: warehouse, namespaces, tables", 8181, "/ui", { mark: "iceberg" }],
+  ["MinIO Console", "The Parquet and metadata files on object storage", 9001, "/", { mark: "minio" }],
+  ["Trino Web UI", "Queries Trino is running or has run", 8080, "/", { mark: "trino" }],
+  ["Grafana", "The Order Analytics dashboard (Lab 5)", 3000, "/d/streaming-lakehouse-orders", { mark: "grafana" }],
+];
+$("wmenu").innerHTML = WORKSHOP.map(([name, desc, port, path, icon]) =>
+  `<a role="menuitem" target="_blank" rel="noopener" href="${location.protocol}//${host}:${port}${path}">` +
+  (icon.mark ? `<svg class="wicon mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${icon.mark}"/></svg>`
+             : `<svg class="wicon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${GLYPH[icon.glyph]}</svg>`) +
+  `<span><b>${name}</b><small>${desc}</small></span><span class="port">:${port}</span></a>`).join("");
+function wmenuOpen(open) {
+  $("wmenu").hidden = !open;
+  $("wmenuBtn").setAttribute("aria-expanded", open);
+  if (open) $("wmenu").querySelector("a").focus();
+}
+$("wmenuBtn").onclick = e => { e.stopPropagation(); wmenuOpen($("wmenu").hidden); };
+document.addEventListener("click", e => { if (!e.target.closest(".wmenu")) wmenuOpen(false); });
+$("wmenu").addEventListener("click", () => wmenuOpen(false));
+$("wmenu").addEventListener("keydown", e => {
+  const items = [...$("wmenu").querySelectorAll("a")], i = items.indexOf(document.activeElement);
+  if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  else if (e.key === "Escape") { wmenuOpen(false); $("wmenuBtn").focus(); }
+});
 let session = null, sql = null, status = null;
 
 // ── Diagram buttons ──────────────────────────────────────────────────────────
@@ -471,7 +531,7 @@ const PILLS = [
   [768, 432, 74, "Deploy", "deploy", "revenue"],
   [997, 118, 90, "View data", "view", "lake"],
   [997, 250, 90, "Open", "open", "minio"],
-  [997, 432, 90, "View data", "view", "revenue_5m"],
+  [997, 432, 90, "View data", "view", "revenue_1m"],
   [1237, 114, 90, "Open", "open", "trino"],
   [1208, 214, 70, "Create", "create", "iceberg_flink"], [1284, 214, 72, "View data", "view", "iceberg_flink"],
   [1237, 320, 90, "View data", "view", "union"],
@@ -516,7 +576,7 @@ function setPill(p, label, cls, aria) {
 const STATE_LABEL = { inactive: "not created", ready: "created", starting: "starting", live: "live",
                       idle: "not deployed", running: "running", failing: "restarting" };
 const NODE_KIND = { kafka: "SOURCE", product_catalog: "SOURCE", orders_log: "FLUSS LOG", product_lookup: "FLUSS PK",
-                    orders_enriched: "FLUSS LOG", revenue_5m: "POSTGRES", lake: "ICEBERG", tiering: "FLINK JOB", union: "FLINK QUERY",
+                    orders_enriched: "FLUSS LOG", revenue_1m: "POSTGRES", lake: "ICEBERG", tiering: "FLINK JOB", union: "FLINK QUERY",
                     iceberg_flink: "FLINK + ICEBERG" };
 
 function paint() {
@@ -543,7 +603,7 @@ function paint() {
     setPill(pill("create", n), exists ? "✓ Created" : "Create", exists ? "off" : "primary",
             exists ? `${n} is created` : `Create ${n}`);
   }
-  for (const n of ["kafka", "product_catalog", "orders_log", "product_lookup", "orders_enriched", "revenue_5m"])
+  for (const n of ["kafka", "product_catalog", "orders_log", "product_lookup", "orders_enriched", "revenue_1m"])
     setPill(pill("view", n), "View data", status.nodes[n].exists ? "" : "off", `View the data of ${n}`);
   setPill(pill("view", "lake"), "View data", status.nodes.lake.state === "inactive" ? "off" : "", "View orders_enriched in Iceberg");
   const ice = status.nodes.iceberg_flink.exists;
@@ -574,7 +634,7 @@ async function poll() {
   polling = true;
   try {
     status = await api(`/api/pipeline/status/${session}`);
-    if (status.bootstrap && !bootstrapping) {   // the postgres catalog for revenue_5m is missing
+    if (status.bootstrap && !bootstrapping) {   // the postgres catalog for revenue_1m is missing
       bootstrapping = true;
       setStatus("registering the postgres catalog…");
       try { await api(`/api/pipeline/bootstrap/${session}`, {}); status = await api(`/api/pipeline/status/${session}`); }
@@ -608,7 +668,7 @@ const ABOUT = {
   orders_log: "A Fluss Log table: an ordered, append-only store of every order event, written by kafka-to-fluss.",
   product_lookup: "A Fluss primary-key table: one row per product, kept in sync with PostgreSQL by pgcdc-to-fluss.",
   orders_enriched: "A Fluss Log table of order events enriched with product details. The table that is tiered to Iceberg.",
-  revenue_5m: "The data warehouse: a PostgreSQL server of its own (postgres-dwh, database dwh), separate from the shop's. revenue_5m is pre-created there and reached through the postgres JDBC catalog as dwh_user, which sees only the warehouse. revenue-analytics-sink upserts one row per 5-minute window and category; Grafana reads it.",
+  revenue_1m: "The data warehouse: a PostgreSQL server of its own (postgres-dwh, database dwh), separate from the shop's. revenue_1m is pre-created there and reached through the postgres JDBC catalog as dwh_user, which sees only the warehouse. revenue-analytics-sink upserts one row per 1-minute window and category; Grafana reads it.",
   lake: "orders_enriched as an Iceberg table, catalogued by Lakekeeper: one snapshot per tiering commit, read through Fluss's $lake view.",
   iceberg_flink_create: "Registers Lakekeeper — the Iceberg REST catalog — in Flink as the catalog iceberg, so Flink reads the Iceberg tables directly, with no Fluss in the path. It is kept by the CatalogStore, like fluss and postgres: it survives a new session. The SHOW TABLES after it lists what Lakekeeper holds; it fails until tiering has created the orders namespace.",
   iceberg_flink: "Flink reading orders_enriched straight from Iceberg, through the iceberg catalog: no Fluss in the path. Iceberg keeps every snapshot, so the query can travel back to one with an OPTIONS('snapshot-id') hint. The oldest snapshot's id is filled in for you.",
@@ -617,11 +677,11 @@ const ABOUT = {
   kafka_to_fluss: "Reads every event from the Kafka topic and appends it to fluss.orders.orders_log.",
   pgcdc_to_fluss: "Snapshots product_catalog, then streams every change into fluss.orders.product_lookup.",
   enrichment: "A lookup join: each order event looks up its product in product_lookup and is written, enriched, to orders_enriched.",
-  revenue: "Aggregates orders_enriched into 5-minute windows per category and upserts them into PostgreSQL revenue_5m.",
+  revenue: "Aggregates orders_enriched into 1-minute windows per category and upserts them into PostgreSQL revenue_1m.",
   enable: "An ALTER TABLE, not a job: it opts orders_enriched into tiering. The tiering service picks it up on its next round.",
 };
 const EDGE_FROM = { kafka_to_fluss: ["kafka"], pgcdc_to_fluss: ["product_catalog"], enrichment: ["orders_log", "product_lookup"], revenue: ["orders_enriched"] };
-const EDGE_TO = { kafka_to_fluss: "orders_log", pgcdc_to_fluss: "product_lookup", enrichment: "orders_enriched", revenue: "revenue_5m" };
+const EDGE_TO = { kafka_to_fluss: "orders_log", pgcdc_to_fluss: "product_lookup", enrichment: "orders_enriched", revenue: "revenue_1m" };
 
 let dlg = null;   // { action, target, defaultSql }
 const editor = CodeMirror.fromTextArea($("actSql"), {
@@ -663,7 +723,7 @@ function openDialog(action, target) {
               : target === "iceberg_flink" ? "Flink + Iceberg · time travel"
               : target === "kafka" ? "Kafka · orders_log topic"
               : target === "product_catalog" ? "PostgreSQL · product_catalog"
-              : target === "revenue_5m" ? "PostgreSQL · revenue_5m" : `fluss.orders.${target}`;
+              : target === "revenue_1m" ? "PostgreSQL · revenue_1m" : `fluss.orders.${target}`;
   $("actTitle").textContent = action === "create" && target === "iceberg_flink" ? "Create · the iceberg catalog (Lakekeeper)"
     : (action === "view" ? "View data · " : action === "create" ? "Create · " : action === "deploy" ? "Deploy · " : "") + title;
   $("actKind").textContent = action === "deploy" ? "FLINK JOB" : action === "enable" ? "ALTER TABLE" : NODE_KIND[target] || "";
@@ -1063,7 +1123,9 @@ catalogInit({
   },
   ddl: path => openStructure(path, true),
   onToggle: () => { placeSteps(); atFit ? fit() : applyView(); },   // the stage got narrower or wider
-  foot: "Click a table for its columns; double-click it to copy its name. <b>Info</b> shows its structure; <b>DDL</b> its CREATE statement.",
+  // The Job Catalog tab: each job links to its page in the Flink Web UI (running or completed).
+  jobs: { link: j => `${location.protocol}//${host}:8081/#/job/${j.active ? "running" : "completed"}/${j.jid}/overview` },
+  foot: "Tables: click for columns, double-click to copy the name; <b>Info</b> / <b>DDL</b> show the structure. Jobs: <b>Flink UI</b> opens the job in the Flink Web UI.",
 });
 $("structInsert").textContent = "Copy name";
 $("structInsert").title = "Copy the table's name, to paste into a pop-up's SQL";

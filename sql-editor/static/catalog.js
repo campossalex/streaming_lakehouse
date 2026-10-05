@@ -9,6 +9,9 @@
 //     ddl,       (path) => …  the DDL button: path is [catalog, database, table]
 //     foot,      the help line at the bottom of the panel (HTML)
 //     onToggle,  optional (open) => …  after the panel opens or closes
+//     jobs,      optional { link: (job) => url }: splits the panel, the Data Catalog on top
+//                and the Job Catalog below — the pipeline's Flink jobs (/api/jobs), each
+//                linked to its page in the Flink Web UI
 //   })
 //
 // and calls catalogReload() when its session changes, and catalogAfterDdl() after a script.
@@ -43,6 +46,7 @@ function catalogInit(hooks) {
   <div class="sbody" id="structBody"></div>
 </dialog>`);
   $("catalogFoot").innerHTML = hooks.foot;
+  if (hooks.jobs) jobsInit();
   $("structClose").onclick = () => $("structure").close();
   $("structure").addEventListener("click", e => { if (e.target === $("structure")) $("structure").close(); });   // backdrop
   $("structInsert").onclick = () => { $("structure").close(); catalogHooks.insert(qualified(structPath)); };
@@ -50,7 +54,7 @@ function catalogInit(hooks) {
 
   $("catalogToggle").onclick = () => catalogShow($("catalog").hidden);
   $("catalogClose").onclick = () => catalogShow(false);
-  $("catalogRefresh").onclick = catalogRefreshAll;
+  $("catalogRefresh").onclick = () => { catalogRefreshAll(); if (catalogHooks.jobs) jobsLoad(); };
 
   // Expand all: every catalog, then every database in them, level by level, so all tables
   // are listed. Not the tables themselves: that would be one DESCRIBE per table.
@@ -289,7 +293,7 @@ function catalogShow(show) {
   $("catalog").hidden = !show;
   $("catalogToggle").setAttribute("aria-expanded", show);
   store.set(catalogHooks.storeKey, show ? "1" : null);
-  if (show) catalogReload();
+  if (show) { catalogReload(); if (catalogHooks.jobs) jobsLoad(); }
   catalogHooks.onToggle?.(show);   // e.g. the pipeline page re-fits its diagram to the narrower stage
 }
 // ── The structure dialog ──
@@ -355,4 +359,108 @@ async function openStructure(path, showDdl) {
     (structDdl ? `<details${showDdl ? " open" : ""}><summary>CREATE statement</summary><pre class="ddl"></pre></details>` : "");
   const pre = $("structBody").querySelector("pre.ddl");
   if (pre) CodeMirror.runMode(structDdl, "text/x-flinksql", pre);
+}
+
+// ── The Job Catalog (the panel's lower half, when catalogInit got `jobs`) ──────
+// The pipeline's Flink jobs from /api/jobs — the jobs that write a table, and the tiering
+// service; interactive SELECTs are left out — active ones first, each linked to its page
+// in the Flink Web UI. Polled every 5 s while the panel is open.
+
+let jobsTimer = null;
+
+function jobsInit() {
+  $("catalog").classList.add("split");
+  const sec = (id, label, cls = "") =>
+    `<div class="cat-sec ${cls}" id="${id}"><button type="button" class="sec-toggle" aria-expanded="true"
+       title="Collapse or expand this section"><span class="caret" aria-hidden="true">▾</span>${label}</button><span class="spacer"></span></div>`;
+  $("catalogTree").insertAdjacentHTML("beforebegin", sec("dataSec", "Data Catalog"));
+  // Expand / Collapse act on the tree only: they move into its section header.
+  $("dataSec").append($("catalogExpand"), $("catalogCollapse"));
+  $("catalogTree").insertAdjacentHTML("afterend",
+    `<div class="cat-split" id="catSplit" role="separator" aria-orientation="horizontal" aria-label="Resize the two catalogs"
+          tabindex="0" title="Drag to resize · double-click to reset"></div>` +
+    sec("jobsSec", "Job Catalog", "jobs") + `<div id="jobList" class="job-list" aria-label="Pipeline jobs"></div>`);
+  $("jobsSec").insertAdjacentHTML("beforeend", `<span class="cnt" id="jobCount"></span>`);
+  $("catalogRefresh").setAttribute("aria-label", "Refresh the catalog and the job list");
+
+  // Collapse / expand, and the split height, remembered under <storeKey>.split.
+  let st = {};
+  try { st = JSON.parse(store.get(catalogHooks.storeKey + ".split") || "{}") || {}; } catch {}
+  const save = () => store.set(catalogHooks.storeKey + ".split", JSON.stringify(st));
+  const apply = () => {
+    for (const [id, key] of [["dataSec", "dataClosed"], ["jobsSec", "jobsClosed"]]) {
+      $(id).classList.toggle("closed", !!st[key]);
+      $(id).querySelector(".sec-toggle").setAttribute("aria-expanded", !st[key]);
+    }
+    $("catalogTree").hidden = !!st.dataClosed;
+    $("jobList").hidden = !!st.jobsClosed;
+    $("catSplit").hidden = !!(st.dataClosed || st.jobsClosed);   // nothing to share
+    // An explicit height for the tree; the job list takes the rest. Default: the CSS 3:2.
+    $("catalogTree").style.flex = st.treeH && !st.jobsClosed ? `0 0 ${st.treeH}px` : "";
+  };
+  $("dataSec").querySelector(".sec-toggle").onclick = () => { st.dataClosed = !st.dataClosed; apply(); save(); };
+  $("jobsSec").querySelector(".sec-toggle").onclick = () => { st.jobsClosed = !st.jobsClosed; apply(); save(); };
+
+  const MIN = 60;
+  const clampTree = h => {   // both parts keep at least MIN px
+    const room = $("catalogTree").offsetHeight + $("jobList").offsetHeight;
+    return Math.round(Math.min(Math.max(h, MIN), room - MIN));
+  };
+  $("catSplit").addEventListener("pointerdown", e => {
+    e.preventDefault();
+    const startY = e.clientY, startH = $("catalogTree").offsetHeight;
+    try { $("catSplit").setPointerCapture(e.pointerId); } catch {}   // keep the drag even if capture is refused
+    $("catSplit").classList.add("dragging");
+    const move = ev => { st.treeH = clampTree(startH + ev.clientY - startY); apply(); };
+    const up = () => {
+      $("catSplit").removeEventListener("pointermove", move);
+      $("catSplit").removeEventListener("pointerup", up);
+      $("catSplit").classList.remove("dragging");
+      save();
+    };
+    $("catSplit").addEventListener("pointermove", move);
+    $("catSplit").addEventListener("pointerup", up);
+  });
+  $("catSplit").addEventListener("keydown", e => {
+    const d = e.key === "ArrowUp" ? -20 : e.key === "ArrowDown" ? 20 : 0;
+    if (!d) return;
+    e.preventDefault();
+    st.treeH = clampTree($("catalogTree").offsetHeight + d); apply(); save();
+  });
+  $("catSplit").addEventListener("dblclick", () => { delete st.treeH; apply(); save(); });
+  apply();
+
+  jobsTimer = setInterval(() => { if (!$("catalog").hidden && !st.jobsClosed) jobsLoad(); }, 5000);
+}
+
+const JOB_STATE = { RUNNING: "run", CREATED: "start", INITIALIZING: "start", RECONCILING: "start",
+                    RESTARTING: "fail", FAILING: "fail", FAILED: "fail", CANCELLING: "end", CANCELED: "end", FINISHED: "end" };
+function jobDuration(ms) {
+  if (ms == null || ms < 0) return "";
+  const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h ? `${h}h ${String(m).padStart(2, "0")}m` : m ? `${m}m ${String(s % 60).padStart(2, "0")}s` : `${s}s`;
+}
+
+async function jobsLoad() {
+  if ($("catalog").hidden) return;
+  let jobs;
+  try { jobs = (await api("/api/jobs")).jobs.filter(j => j.kind !== "query"); }   // pipeline jobs only
+  catch (e) { $("jobList").replaceChildren(catalogMsg(e.message.split("\n")[0], true)); return; }
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const item = j => {
+    const what = j.kind === "service" ? "tiering service: Fluss → Iceberg"
+               : j.sinks.length ? `→ ${j.sinks.map(esc).join(", ")}` : "pipeline job";
+    return `<li class="job ${JOB_STATE[j.state] || "end"}">
+      <div class="jtop"><span class="jstate">${esc(j.state.toLowerCase())}</span>
+        <span class="jname" title="${esc(j.name)}">${esc(j.name)}</span></div>
+      <div class="jmeta"><span class="jwhat" title="${what}">${what}</span><span class="jdur">${jobDuration(j.duration)}</span>
+        <a href="${esc(catalogHooks.jobs.link(j))}" target="_blank" rel="noopener" title="Open this job in the Flink Web UI">Flink UI ↗</a></div>
+    </li>`;
+  };
+  const active = jobs.filter(j => j.active), ended = jobs.filter(j => !j.active).slice(0, 10);
+  $("jobCount").textContent = `${active.length} running`;
+  $("jobList").innerHTML =
+    (active.length ? `<ul>${active.map(item).join("")}</ul>`
+                   : `<p class="cat-msg">No pipeline job is running yet: deploy one from the diagram.</p>`) +
+    (ended.length ? `<h4>Ended <span>${ended.length}</span></h4><ul>${ended.map(item).join("")}</ul>` : "");
 }

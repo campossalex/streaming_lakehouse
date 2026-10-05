@@ -583,16 +583,16 @@ NODES = {
     "orders_log":      {"table": ("fluss", "orders", "orders_log"), "feed": "kafka_to_fluss"},
     "product_lookup":  {"table": ("fluss", "orders", "product_lookup"), "feed": "pgcdc_to_fluss"},
     "orders_enriched": {"table": ("fluss", "orders", "orders_enriched"), "feed": "enrichment"},
-    "revenue_5m":      {"table": ("postgres", "dwh", "revenue_5m"), "listed": "public.revenue_5m",
+    "revenue_1m":      {"table": ("postgres", "dwh", "revenue_1m"), "listed": "public.revenue_1m",
                         "feed": "revenue", "precreated": True},
 }
 EDGES = {
     "kafka_to_fluss": {"from": ["kafka"], "to": "orders_log", "file": "jobs/10_kafka_to_fluss.sql"},
     "pgcdc_to_fluss": {"from": ["product_catalog"], "to": "product_lookup", "file": "jobs/20_pgcdc_to_fluss.sql"},
     "enrichment":     {"from": ["orders_log", "product_lookup"], "to": "orders_enriched", "file": "jobs/30_enrichment.sql"},
-    "revenue":        {"from": ["orders_enriched"], "to": "revenue_5m", "file": "jobs/50_revenue.sql"},
+    "revenue":        {"from": ["orders_enriched"], "to": "revenue_1m", "file": "jobs/50_revenue.sql"},
 }
-# Pre-created on page load: revenue_5m already exists in the warehouse (postgres-dwh), so Flink only needs
+# Pre-created on page load: revenue_1m already exists in the warehouse (postgres-dwh), so Flink only needs
 # the postgres catalog. The two sources are not: attendees create them from their boxes.
 BOOTSTRAP_FILES = ["ddl/03_postgres.sql"]
 
@@ -642,9 +642,9 @@ def pipeline_sql():
                                "view": view("fluss.orders.product_lookup", "One row per product, kept in sync with PostgreSQL by pgcdc-to-fluss.")},
             "orders_enriched": {"create": catalog + "\n" + database + "\n" + section("ddl/01_fluss.sql", "Step 9:"),
                                 "view": view("fluss.orders.orders_enriched", "Order events joined with product details. Once tiered, this is a union read: Iceberg first, then Fluss.")},
-            "revenue_5m": {"view": "-- revenue_5m in the data warehouse (postgres-dwh), through the postgres catalog: a bounded read, newest window first.\n"
+            "revenue_1m": {"view": "-- revenue_1m in the data warehouse (postgres-dwh), through the postgres catalog: a bounded read, newest window first.\n"
                                    "SET 'execution.runtime-mode' = 'batch';\n"
-                                   "SELECT * FROM postgres.dwh.revenue_5m ORDER BY window_start DESC, category;\n"
+                                   "SELECT * FROM postgres.dwh.revenue_1m ORDER BY window_start DESC, category;\n"
                                    "SET 'execution.runtime-mode' = 'streaming';\n"},
             "lake": {"view": "-- orders_enriched in Iceberg, through Fluss's $lake view: its snapshots.\n" + snapshots},
             "iceberg_flink": {"create": "-- Lab 4, Step 18 bonus: Lakekeeper as a Flink catalog of its own.\n" + iceberg_catalog,
@@ -672,7 +672,7 @@ def pipeline_bootstrap(session):
 
 # Which table a job writes, from its plan. Matching jobs to arrows by what they write, not
 # by name, keeps an arrow lit when an attendee edits pipeline.name in the pop-up. Fluss
-# sinks print "Sink(orders.orders_log)", JDBC ones "Sink(table=[postgres.dwh.revenue_5m]".
+# sinks print "Sink(orders.orders_log)", JDBC ones "Sink(table=[postgres.dwh.revenue_1m]".
 SINK_FULL = re.compile(r"Sink\(table=\[([^\]]+)\]")
 SINK_SHORT = re.compile(r"Sink\(([\w$.`]+)\)")
 plan_sinks = {}
@@ -918,6 +918,37 @@ def pipeline_status(session):
                       "starting" if tjob == "RUNNING" else "ready"}
     missing = [n for n, spec in NODES.items() if spec.get("precreated") and not exists[n]]
     return jsonify({"nodes": nodes, "edges": edges, "tiering": tiering, "bootstrap": bool(missing)})
+
+
+# The data probe's jobs (want_probe): SELECT 1 FROM <table> LIMIT 1, as Flink names them.
+PROBE_JOB = re.compile(r"\s*SELECT 1\s+FROM\b.*FETCH NEXT 1 ROWS ONLY\s*$", re.S | re.I)
+
+
+@app.get("/api/jobs")
+def jobs_list():
+    """Every Flink job, newest first, for the catalog panel's Job Catalog: what kind of job
+    it is (pipeline job, tiering service, interactive query) and, for an active pipeline
+    job, the table it writes — read from its plan, as the pipeline status does."""
+    try:
+        jobs = flink("GET", "/jobs/overview").get("jobs", [])
+    except (GatewayError, requests.RequestException) as e:
+        return json_error(f"could not reach the Flink JobManager: {e}")
+    out = []
+    for j in sorted(jobs, key=lambda j: j.get("start-time", 0), reverse=True):
+        name, state = j["name"], j["state"]
+        if PROBE_JOB.match(name):
+            continue   # the pipeline page's own "does this table return a row?" checks
+        kind = "service" if name.startswith(TIERING_JOB) else "query" if name.lstrip().upper().startswith("SELECT") else "job"
+        sinks = []
+        if kind == "job" and state in ACTIVE:
+            try:   # Fluss plans name the sink db.table only: show it with its catalog
+                sinks = [x if x.count(".") >= 2 else "fluss." + x for x in job_sinks(j["jid"])]
+            except (GatewayError, requests.RequestException):
+                pass
+        out.append({"jid": j["jid"], "name": " ".join(name.split()), "state": state, "kind": kind,
+                    "sinks": sinks, "start": j.get("start-time"), "duration": j.get("duration"),
+                    "active": state in ACTIVE})
+    return jsonify({"jobs": out})
 
 
 @app.post("/api/jobs/<jid>/cancel")
