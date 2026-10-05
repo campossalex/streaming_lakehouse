@@ -21,8 +21,8 @@ How the environment is built and why, for whoever runs or changes it. To deploy 
    fluss.orders.product_lookup (PK) ──► fluss.orders.orders_enriched  (Log table)
                                                │          │
                   job: Fluss Lake Tiering      │          │ job: revenue-analytics-sink
-                  Service (tiering.sh)         ▼          ▼   (TUMBLE 5 min)
-                                               │   PostgreSQL dwh.revenue_5m ──► Grafana
+                  Service (tiering.sh)         ▼          ▼   (TUMBLE 1 min)
+                                               │   PostgreSQL dwh.revenue_1m ──► Grafana
                                                ▼
                Iceberg  lakehouse.orders.orders_enriched
                ├─ metadata ── Lakekeeper (REST catalog) ── catalog-db (Postgres)
@@ -42,7 +42,7 @@ Bonus track: `order-status-sync` upserts `orders_log` into the PK table
 | Lake | `minio`, `lakekeeper`, `catalog-db` | Object storage and the Iceberg REST catalog |
 | Readers | `trino`, `cloudbeaver` | Plain Iceberg reads with no Fluss in the path |
 | Homepage | `homepage` | nginx serving `homepage/index.html` on port 80: a card per web UI, links built from the host the page was opened on, and a reachability check every 15 s |
-| Sources/sinks | `redpanda`, `postgres` (shop), `postgres-dwh` (data warehouse), `order-gen`, `grafana` | Order events, product catalog (CDC), the warehouse table revenue_5m, order analytics dashboard |
+| Sources/sinks | `redpanda`, `postgres` (shop), `postgres-dwh` (data warehouse), `order-gen`, `grafana` | Order events, product catalog (CDC), the warehouse table revenue_1m, order analytics dashboard |
 
 ---
 
@@ -81,7 +81,7 @@ the tiering service.
 |------|---------|
 | `flink_sql/ddl/01_fluss.sql` | The `fluss` catalog, the `orders` database and all four Fluss tables |
 | `flink_sql/ddl/02_sources.sql` | Kafka source and postgres-cdc source |
-| `flink_sql/ddl/03_postgres.sql` | The `postgres` JDBC catalog; Lab 5 writes `postgres.dwh.revenue_5m` through it (column meanings: `pg_dwh_ddl.sql`) |
+| `flink_sql/ddl/03_postgres.sql` | The `postgres` JDBC catalog; Lab 5 writes `postgres.dwh.revenue_1m` through it (column meanings: `pg_dwh_ddl.sql`) |
 | `flink_sql/jobs/10…50_*.sql` | One long-running `INSERT INTO` each, in lab order |
 | `flink_sql/lake/enable_tiering.sql` | The two `ALTER TABLE ... 'table.datalake.enabled'` statements |
 | `flink_sql/explore.sql` | The labs' SELECTs and ALTERs; one editor example per `-- ---- title` section |
@@ -89,7 +89,7 @@ the tiering service.
 | `sql-editor/` | Flask proxy (`app.py`) in front of the SQL Gateway, and the one-page UI |
 | `tiering.sh`, `submit.sh` | Mounted into `jobmanager` and `sql-client` respectively |
 | `tiering.args` | The tiering service's program arguments — the one copy, used by `tiering.sh` and the editor's Start button |
-| `pg_shop_ddl.sql`, `pg_dwh_ddl.sql` | The two PostgreSQL servers' setup, run once each via `docker-entrypoint-initdb.d`: `shop` seeds `product_catalog` (500 rows), its users (`shop_user`, `cdc_user`) and the CDC slot and publication; `dwh` creates `revenue_5m` and `dwh_user` |
+| `pg_shop_ddl.sql`, `pg_dwh_ddl.sql` | The two PostgreSQL servers' setup, run once each via `docker-entrypoint-initdb.d`: `shop` seeds `product_catalog` (500 rows), its users (`shop_user`, `cdc_user`) and the CDC slot and publication; `dwh` creates `revenue_1m` and `dwh_user` |
 
 ---
 
@@ -196,7 +196,7 @@ want to submit another job that reads Kafka or CDC.
 | Iceberg plugin in Fluss | The image's `plugins/iceberg/` has `fluss-lake-iceberg` but not S3FileIO; the entrypoints copy `iceberg-aws`, `iceberg-aws-bundle` and `failsafe` in from `lib/` |
 | Hadoop | Trino's relocated `hadoop-apache`, not `flink-shaded-hadoop-2-uber` — see below |
 | CDC | `wal_level=logical` on the Postgres command line; slot and publication created by the init script |
-| Revenue sink | `postgres.dwh.revenue_5m` (server `postgres-dwh`, user `dwh_user`) through a JDBC catalog, which reads the table's PRIMARY KEY from PostgreSQL (upsert). Needs the `flink-connector-jdbc-core` and `-postgres` JARs: the all-in-one `flink-connector-jdbc` 3.3.0 JAR registers two `jdbc` catalog factories and every `CREATE CATALOG` fails |
+| Revenue sink | `postgres.dwh.revenue_1m` (server `postgres-dwh`, user `dwh_user`) through a JDBC catalog, which reads the table's PRIMARY KEY from PostgreSQL (upsert). Needs the `flink-connector-jdbc-core` and `-postgres` JARs: the all-in-one `flink-connector-jdbc` 3.3.0 JAR registers two `jdbc` catalog factories and every `CREATE CATALOG` fails |
 | Grafana | Datasource and the *Order Analytics* dashboard (`grafana/dashboards/order_analytics.json`) provisioned, pinned to the datasource uid `lakehouse_dwh` |
 
 Four of these cost real debugging time and are worth knowing about before changing
@@ -275,8 +275,8 @@ SELECTs fill it up: cancel what you are not using, from the editor or the Flink 
 
 **Grafana panels are empty.** A window is written only once it closes. On a table with
 history, every past window is written as soon as `revenue-analytics-sink` has
-caught up; on an empty one, the first row lands about 5 minutes after it starts. Check with
-`docker compose exec postgres-dwh psql -U root -d dwh -c 'SELECT count(*) FROM revenue_5m;'`.
+caught up; on an empty one, the first row lands about a minute after it starts. Check with
+`docker compose exec postgres-dwh psql -U root -d dwh -c 'SELECT count(*) FROM revenue_1m;'`.
 
 ---
 

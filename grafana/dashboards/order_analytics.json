@@ -2,7 +2,7 @@
   "id": null,
   "uid": "streaming-lakehouse-orders",
   "title": "Streaming Lakehouse — Order Analytics",
-  "description": "5-minute order analytics per product category, from the revenue-analytics-sink job (fluss.orders.orders_enriched -> PostgreSQL revenue_5m).",
+  "description": "1-minute order analytics per product category, from the revenue-analytics-sink job (fluss.orders.orders_enriched -> PostgreSQL revenue_1m).",
   "tags": [
     "streaming-lakehouse",
     "fluss",
@@ -85,7 +85,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(SUM(order_count), 0) AS value FROM revenue_5m WHERE $__timeFilter(window_start)",
+          "rawSql": "SELECT COALESCE(SUM(order_count), 0) AS value FROM revenue_1m WHERE $__timeFilter(window_start)",
           "refId": "A"
         }
       ]
@@ -148,7 +148,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(SUM(revenue), 0) AS value FROM revenue_5m WHERE $__timeFilter(window_start)",
+          "rawSql": "SELECT COALESCE(SUM(revenue), 0) AS value FROM revenue_1m WHERE $__timeFilter(window_start)",
           "refId": "A"
         }
       ]
@@ -211,7 +211,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT SUM(revenue) / NULLIF(SUM(order_count), 0) AS value FROM revenue_5m WHERE $__timeFilter(window_start)",
+          "rawSql": "SELECT SUM(revenue) / NULLIF(SUM(order_count), 0) AS value FROM revenue_1m WHERE $__timeFilter(window_start)",
           "refId": "A"
         }
       ]
@@ -274,7 +274,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(SUM(delivered_revenue), 0) AS value FROM revenue_5m WHERE $__timeFilter(window_start)",
+          "rawSql": "SELECT COALESCE(SUM(delivered_revenue), 0) AS value FROM revenue_1m WHERE $__timeFilter(window_start)",
           "refId": "A"
         }
       ]
@@ -338,7 +338,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT SUM(cancelled_count)::numeric / NULLIF(SUM(order_count), 0) AS value FROM revenue_5m WHERE $__timeFilter(window_start)",
+          "rawSql": "SELECT SUM(cancelled_count)::numeric / NULLIF(SUM(order_count), 0) AS value FROM revenue_1m WHERE $__timeFilter(window_start)",
           "refId": "A"
         }
       ]
@@ -347,7 +347,7 @@
       "id": 6,
       "type": "stat",
       "title": "Products, last window",
-      "description": "Distinct products ordered in the most recent closed 5-minute window. Each product has one category, so the per-category counts add up exactly.",
+      "description": "Distinct products ordered in the most recent closed 1-minute window. Each product has one category, so the per-category counts add up exactly.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "lakehouse_dwh"
@@ -401,7 +401,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(SUM(unique_products), 0) AS value FROM revenue_5m WHERE window_start = (SELECT max(window_start) FROM revenue_5m WHERE $__timeFilter(window_start))",
+          "rawSql": "SELECT COALESCE(SUM(unique_products), 0) AS value FROM revenue_1m WHERE window_start = (SELECT max(window_start) FROM revenue_1m WHERE $__timeFilter(window_start))",
           "refId": "A"
         }
       ]
@@ -409,8 +409,8 @@
     {
       "id": 7,
       "type": "timeseries",
-      "title": "Revenue per 5-minute window",
-      "description": "Booked: value of new orders. Delivered: value of orders fulfilled in the window. Cancelled: value lost. One point per closed 5-minute window.",
+      "title": "Revenue per 1-minute window",
+      "description": "Booked: value of new orders. Delivered: value of orders fulfilled in the window. Cancelled: value lost. One point per closed 1-minute window.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "lakehouse_dwh"
@@ -512,7 +512,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT window_start AS time, SUM(revenue) AS \"Booked\", SUM(delivered_revenue) AS \"Delivered\", SUM(cancelled_revenue) AS \"Cancelled\" FROM revenue_5m WHERE $__timeFilter(window_start) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT window_start AS time, SUM(revenue) AS \"Booked\", SUM(delivered_revenue) AS \"Delivered\", SUM(cancelled_revenue) AS \"Cancelled\" FROM revenue_1m WHERE $__timeFilter(window_start) GROUP BY 1 ORDER BY 1",
           "refId": "A"
         }
       ]
@@ -520,7 +520,7 @@
     {
       "id": 8,
       "type": "timeseries",
-      "title": "Order lifecycle per 5-minute window",
+      "title": "Order lifecycle per 1-minute window",
       "description": "How many orders reached each status in the window. In steady state the stages run close together; a gap that keeps widening means orders are piling up at a stage.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -653,7 +653,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT window_start AS time, SUM(order_count) AS \"Placed\", SUM(paid_count) AS \"Paid\", SUM(shipped_count) AS \"Shipped\", SUM(delivered_count) AS \"Delivered\", SUM(cancelled_count) AS \"Cancelled\" FROM revenue_5m WHERE $__timeFilter(window_start) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT window_start AS time, SUM(order_count) AS \"Placed\", SUM(paid_count) AS \"Paid\", SUM(shipped_count) AS \"Shipped\", SUM(delivered_count) AS \"Delivered\", SUM(cancelled_count) AS \"Cancelled\" FROM revenue_1m WHERE $__timeFilter(window_start) GROUP BY 1 ORDER BY 1",
           "refId": "A"
         }
       ]
@@ -724,7 +724,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT category, SUM(revenue) AS value FROM revenue_5m WHERE $__timeFilter(window_start) GROUP BY category ORDER BY value DESC",
+          "rawSql": "SELECT category, SUM(revenue) AS value FROM revenue_1m WHERE $__timeFilter(window_start) GROUP BY category ORDER BY value DESC",
           "refId": "A"
         }
       ]
@@ -733,7 +733,7 @@
       "id": 10,
       "type": "status-history",
       "title": "Revenue booked by category and window",
-      "description": "Each cell is one category in one 5-minute window; darker means more revenue booked. Spot which categories are heating up or cooling down.",
+      "description": "Each cell is one category in one 1-minute window; darker means more revenue booked. Spot which categories are heating up or cooling down.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "lakehouse_dwh"
@@ -779,7 +779,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT window_start AS time, category AS metric, revenue AS value FROM revenue_5m WHERE $__timeFilter(window_start) ORDER BY 1, 2",
+          "rawSql": "SELECT window_start AS time, category AS metric, revenue AS value FROM revenue_1m WHERE $__timeFilter(window_start) ORDER BY 1, 2",
           "refId": "A"
         }
       ]
@@ -851,7 +851,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT category, SUM(cancelled_count)::numeric / NULLIF(SUM(order_count), 0) AS value FROM revenue_5m WHERE $__timeFilter(window_start) GROUP BY category ORDER BY value DESC NULLS LAST",
+          "rawSql": "SELECT category, SUM(cancelled_count)::numeric / NULLIF(SUM(order_count), 0) AS value FROM revenue_1m WHERE $__timeFilter(window_start) GROUP BY category ORDER BY value DESC NULLS LAST",
           "refId": "A"
         }
       ]
@@ -922,7 +922,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT category, SUM(revenue) / NULLIF(SUM(order_count), 0) AS value FROM revenue_5m WHERE $__timeFilter(window_start) GROUP BY category ORDER BY value DESC NULLS LAST",
+          "rawSql": "SELECT category, SUM(revenue) / NULLIF(SUM(order_count), 0) AS value FROM revenue_1m WHERE $__timeFilter(window_start) GROUP BY category ORDER BY value DESC NULLS LAST",
           "refId": "A"
         }
       ]
@@ -931,7 +931,7 @@
       "id": 13,
       "type": "table",
       "title": "Category detail",
-      "description": "Every revenue_5m measure, per category, over the selected range. Orders and Revenue are what was booked (PLACED); Delivered $ and Cancelled $ the value fulfilled and lost. Click a column header to sort.",
+      "description": "Every revenue_1m measure, per category, over the selected range. Orders and Revenue are what was booked (PLACED); Delivered $ and Cancelled $ the value fulfilled and lost. Click a column header to sort.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "lakehouse_dwh"
@@ -1018,7 +1018,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  category                                                   AS \"Category\",\n  SUM(order_count)                                           AS \"Orders\",\n  SUM(revenue)                                               AS \"Revenue\",\n  SUM(revenue) / NULLIF(SUM(order_count), 0)                 AS \"Avg order\",\n  MAX(max_order_value)                                       AS \"Max order\",\n  AVG(avg_unit_price)                                        AS \"Avg price\",\n  SUM(paid_count)                                            AS \"Paid\",\n  SUM(shipped_count)                                         AS \"Shipped\",\n  SUM(delivered_count)                                       AS \"Delivered\",\n  SUM(cancelled_count)                                       AS \"Cancelled\",\n  SUM(cancelled_count)::numeric / NULLIF(SUM(order_count), 0) AS \"Cancel rate\",\n  SUM(delivered_revenue)                                     AS \"Delivered $\",\n  SUM(cancelled_revenue)                                     AS \"Cancelled $\",\n  SUM(event_count)                                           AS \"Events\"\nFROM revenue_5m\nWHERE $__timeFilter(window_start)\nGROUP BY category\nORDER BY \"Revenue\" DESC",
+          "rawSql": "SELECT\n  category                                                   AS \"Category\",\n  SUM(order_count)                                           AS \"Orders\",\n  SUM(revenue)                                               AS \"Revenue\",\n  SUM(revenue) / NULLIF(SUM(order_count), 0)                 AS \"Avg order\",\n  MAX(max_order_value)                                       AS \"Max order\",\n  AVG(avg_unit_price)                                        AS \"Avg price\",\n  SUM(paid_count)                                            AS \"Paid\",\n  SUM(shipped_count)                                         AS \"Shipped\",\n  SUM(delivered_count)                                       AS \"Delivered\",\n  SUM(cancelled_count)                                       AS \"Cancelled\",\n  SUM(cancelled_count)::numeric / NULLIF(SUM(order_count), 0) AS \"Cancel rate\",\n  SUM(delivered_revenue)                                     AS \"Delivered $\",\n  SUM(cancelled_revenue)                                     AS \"Cancelled $\",\n  SUM(event_count)                                           AS \"Events\"\nFROM revenue_1m\nWHERE $__timeFilter(window_start)\nGROUP BY category\nORDER BY \"Revenue\" DESC",
           "refId": "A"
         }
       ]

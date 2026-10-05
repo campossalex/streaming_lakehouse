@@ -191,7 +191,7 @@ Replace `localhost` with the instance's address when running on AWS.
 | Kafka | `localhost:19092` | `redpanda:9092` | — |
 | Fluss coordinator | `localhost:9123` | `coordinator-server:9123` | — |
 | PostgreSQL — the shop's source database `shop` (`product_catalog`) | `localhost:5432` | `postgres:5432` | `shop_user` / `admin1`; CDC user `cdc_user` / `admin1` |
-| PostgreSQL — the data warehouse `dwh` (`revenue_5m`) | `localhost:5433` | `postgres-dwh:5432` | `dwh_user` / `admin1` |
+| PostgreSQL — the data warehouse `dwh` (`revenue_1m`) | `localhost:5433` | `postgres-dwh:5432` | `dwh_user` / `admin1` |
 | Iceberg REST catalog | `http://localhost:8181/catalog` | `http://lakekeeper:8181/catalog` | warehouse `lakehouse` |
 | MinIO S3 API | `http://localhost:9000` | `http://minio:9000` | `admin` / `password` |
 | Flink SQL Gateway (REST) | `http://localhost:8083` | `http://sql-gateway:8083` | — |

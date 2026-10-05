@@ -633,7 +633,7 @@ const TABLES = {
     ],
     facts: [
       ["Written by", "<code>revenue-analytics-sink</code> — <code>TUMBLE</code> over <code>orders_enriched</code>, upserted into <code>postgres.dwh.revenue_1m</code> through the Postgres JDBC catalog"],
-      ["Freshness", "a row is written when its window closes: 5 minutes, plus the 5 s watermark"],
+      ["Freshness", "a row is written when its window closes: every minute, plus the 5 s watermark"],
       ["Read by", "Grafana, the <i>Order Analytics</i> dashboard"],
       ["Lab step", "Lab 5, Step 19"],
     ],

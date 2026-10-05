@@ -618,9 +618,9 @@ after the table's first snapshot, so a longer interval fails on a freshly tiered
 
 ### Step 19: Create a windowed order analytics job
 
-This job aggregates `orders_enriched` into 5-minute tumbling windows per product category
+This job aggregates `orders_enriched` into 1-minute tumbling windows per product category
 and writes the results to the **data warehouse**, where Grafana reads them: a separate
-PostgreSQL server, `postgres-dwh`, database `dwh`. The table it writes to, `revenue_5m`,
+PostgreSQL server, `postgres-dwh`, database `dwh`. The table it writes to, `revenue_1m`,
 already exists there — so instead of describing it to Flink column by column, register the
 warehouse as a **catalog**:
 
@@ -638,7 +638,7 @@ Every table in the `dwh` database is now visible as `postgres.dwh.<table>`, with
 columns and primary key read from PostgreSQL itself. Look at the sink:
 
 ```sql
-SHOW CREATE TABLE postgres.dwh.revenue_5m;
+SHOW CREATE TABLE postgres.dwh.revenue_1m;
 ```
 
 Note the `PRIMARY KEY (window_start, window_end, category)` at the end — it came from
@@ -651,7 +651,7 @@ Then the job:
 ```sql
 SET 'pipeline.name' = 'revenue-analytics-sink';
 
-INSERT INTO postgres.dwh.revenue_5m
+INSERT INTO postgres.dwh.revenue_1m
 SELECT
   window_start,
   window_end,
@@ -671,7 +671,7 @@ SELECT
   COUNT(DISTINCT `customer_id`)                                                      AS unique_customers,
   COUNT(DISTINCT `product_id`)                                                       AS unique_products
 FROM TABLE(
-  TUMBLE(TABLE fluss.orders.orders_enriched, DESCRIPTOR(`event_time`), INTERVAL '5' MINUTE)
+  TUMBLE(TABLE fluss.orders.orders_enriched, DESCRIPTOR(`event_time`), INTERVAL '1' MINUTE)
 )
 GROUP BY window_start, window_end, `category`;
 
@@ -694,8 +694,8 @@ already provisioned, wired to the `dwh` warehouse database — nothing to import
 
 - **KPI row**: orders and revenue booked, average order value, revenue delivered, the
   cancellation rate, and how many distinct products sold in the last window.
-- **Revenue per 5-minute window**: booked vs delivered vs cancelled, over time.
-- **Order lifecycle per 5-minute window**: how many orders reached each status. The
+- **Revenue per 1-minute window**: booked vs delivered vs cancelled, over time.
+- **Order lifecycle per 1-minute window**: how many orders reached each status. The
   lines run close together in steady state; a gap that keeps widening means orders are
   piling up at a stage.
 - **Revenue booked by category**, ranked, next to a **category × window heatmap** —
@@ -706,7 +706,7 @@ already provisioned, wired to the `dwh` warehouse database — nothing to import
 The dashboard fills with history right away: the job starts from the beginning of
 `orders_enriched` (from Iceberg, through the union read), so every window since Lab 2 is
 computed and written as soon as the job has caught up. From then on, a window is written once it closes —
-a new point every 5 minutes. Hover a panel title's ⓘ for what each one measures.
+a new point every minute. Hover a panel title's ⓘ for what each one measures.
 
 Congrats, you made it! You have built a complete streaming lakehouse — from a Kafka-fed
 generator, through Log and PK table storage in Fluss, to CDC-driven enrichment,

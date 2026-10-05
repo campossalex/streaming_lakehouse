@@ -97,7 +97,7 @@ download "flink-sql-connector-kafka-${KAFKA_CONNECTOR_VERSION}.jar" \
 download "flink-sql-connector-postgres-cdc-${CDC_CONNECTOR_VERSION}.jar" \
   "$MAVEN/org/apache/flink/flink-sql-connector-postgres-cdc/${CDC_CONNECTOR_VERSION}/flink-sql-connector-postgres-cdc-${CDC_CONNECTOR_VERSION}.jar"
 
-# Lab 5 only: the postgres JDBC catalog (ddl/03_postgres.sql) and its revenue_5m sink.
+# Lab 5 only: the postgres JDBC catalog (ddl/03_postgres.sql) and its revenue_1m sink.
 #
 # The core and postgres modules, NOT the all-in-one flink-connector-jdbc JAR. That one
 # registers both the deprecated and the new JdbcCatalogFactory under 'jdbc', and every

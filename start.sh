@@ -268,7 +268,7 @@ cat <<'BANNER'
   Lakekeeper UI       →  http://localhost:8181/ui
   MinIO Console       →  http://localhost:9001   admin / password
   Redpanda Console    →  http://localhost:8082
-  Grafana             →  http://localhost:3000   first 5-minute window in ~6 minutes
+  Grafana             →  http://localhost:3000   first 1-minute window in ~2 minutes
 
   Kafka (from host):      localhost:19092   topic orders_log
   PostgreSQL shop (from host): localhost:5432   shop_user/admin1   db shop

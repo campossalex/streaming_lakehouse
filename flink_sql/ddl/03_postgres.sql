@@ -3,9 +3,9 @@
 --
 -- A JDBC catalog exposes the tables of the data warehouse — its own PostgreSQL server,
 -- `postgres-dwh`, database `dwh` — to Flink as postgres.dwh.<table>, with their columns
--- and primary keys read from PostgreSQL itself. Lab 5 writes to postgres.dwh.revenue_5m
+-- and primary keys read from PostgreSQL itself. Lab 5 writes to postgres.dwh.revenue_1m
 -- through it, as dwh_user (pg_dwh_ddl.sql), so there is no sink
--- table to declare: revenue_5m's PRIMARY KEY (window_start, window_end, category) comes
+-- table to declare: revenue_1m's PRIMARY KEY (window_start, window_end, category) comes
 -- with it, and that key is what makes the JDBC sink upsert each window's row.
 --
 -- Like the fluss catalog, the registration is kept by the file-based CatalogStore

@@ -6,7 +6,7 @@
 -- A second `docker compose up` on the same volume skips it; `docker compose down -v`
 -- re-runs it.
 --
--- One user, dwh_user, owns revenue_5m. Flink's `postgres` JDBC catalog
+-- One user, dwh_user, owns revenue_1m. Flink's `postgres` JDBC catalog
 -- (flink_sql/ddl/03_postgres.sql), Grafana and CloudBeaver all connect as it.
 
 CREATE USER dwh_user WITH PASSWORD 'admin1';
@@ -20,7 +20,7 @@ GRANT CONNECT ON DATABASE dwh TO dwh_user;
 DROP DATABASE postgres;
 
 -- ── Order analytics (Lab 5) ───────────────────────────────────────────────────
--- One row per 5-minute tumbling window and product category, written by the
+-- One row per 1-minute tumbling window and product category, written by the
 -- revenue-analytics-sink job (flink_sql/jobs/50_revenue.sql). Feeds the Grafana
 -- "Order Analytics" dashboard.
 --
@@ -28,7 +28,7 @@ DROP DATABASE postgres;
 -- scoped to ONE status: revenue is what was booked (PLACED), delivered_revenue what was
 -- fulfilled (DELIVERED), cancelled_revenue what was lost. Summing every event's amount
 -- would count each order up to four times.
-CREATE TABLE revenue_5m (
+CREATE TABLE revenue_1m (
     window_start       TIMESTAMP      NOT NULL,
     window_end         TIMESTAMP      NOT NULL,
     category           VARCHAR(30)    NOT NULL,
@@ -52,4 +52,4 @@ CREATE TABLE revenue_5m (
     PRIMARY KEY (window_start, window_end, category)
 );
 
-ALTER TABLE revenue_5m OWNER TO dwh_user;
+ALTER TABLE revenue_1m OWNER TO dwh_user;

@@ -11,7 +11,7 @@
 #   enrich   jobs/30_enrichment.sql       Lab 2   lookup join      -> fluss.orders.orders_enriched
 #   lake     lake/enable_tiering.sql      Lab 3   ALTER TABLE ... 'table.datalake.enabled' (not a job)
 #   status   jobs/40_order_status.sql     Bonus   orders_log       -> fluss.orders.order_status
-#   revenue  jobs/50_revenue.sql          Lab 5   TUMBLE 5 min     -> Postgres revenue_5m
+#   revenue  jobs/50_revenue.sql          Lab 5   TUMBLE 1 min     -> Postgres revenue_1m
 #
 # The tiering service is not in this list: it is a JAR, not SQL. See tiering.sh.
 #

@@ -48,7 +48,7 @@
       "provider": "postgresql",
       "driver": "postgres-jdbc",
       "name": "PostgreSQL — dwh",
-      "description": "The data warehouse: revenue_5m, written by revenue-analytics-sink and read by Grafana.",
+      "description": "The data warehouse: revenue_1m, written by revenue-analytics-sink and read by Grafana.",
       "save-password": true,
       "show-system-objects": false,
       "configuration": {

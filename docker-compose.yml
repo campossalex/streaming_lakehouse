@@ -24,7 +24,7 @@ name: streaming-lakehouse-oss
 #   8082  — Redpanda Console
 #   19092 — Redpanda Kafka (external listener; redpanda:9092 inside the network)
 #   5432  — PostgreSQL `shop` (product_catalog, the CDC source)
-#   5433  — PostgreSQL `dwh` (revenue_5m, the data warehouse)
+#   5433  — PostgreSQL `dwh` (revenue_1m, the data warehouse)
 #   9000  — MinIO S3 API
 #   9001  — MinIO Console (see the Parquet and metadata files Fluss tiers)
 #   8181  — Lakekeeper (Iceberg REST catalog + its web UI at /ui)
@@ -466,7 +466,7 @@ services:
   # ── PostgreSQL ×2: the shop's source database and the data warehouse ─────────
   # Two servers on purpose, so they feel like the two different systems they stand for.
   # `postgres` (database `shop`): product_catalog, the CDC source — pg_shop_ddl.sql.
-  # `postgres-dwh` (database `dwh`): revenue_5m, written by Lab 5 — pg_dwh_ddl.sql.
+  # `postgres-dwh` (database `dwh`): revenue_1m, written by Lab 5 — pg_dwh_ddl.sql.
 
   postgres:
     image: postgres:15
