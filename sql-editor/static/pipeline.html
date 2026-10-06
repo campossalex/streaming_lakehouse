@@ -176,6 +176,55 @@
   #zoomCtl .sep { width: 1px; height: 18px; background: var(--border); margin: 0 2px; }
   #zoomHint { right: 16px; bottom: 62px; padding: 4px 10px; font-size: 11.5px; color: var(--muted); border-radius: 999px; }
 
+  /* ── The guide: the next step's callout, a ring on its button, explanations on hover ── */
+  #guideBtn { display: inline-flex; align-items: center; gap: 6px; }
+  #guideBtn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent);
+                                   background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+  #guide { width: min(340px, calc(100% - 32px)); padding: 10px 12px 12px; font-size: 13px; z-index: 3;
+           border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+  #guide[hidden] { display: none; }
+  #guide .ghead { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted);
+                  text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  #guide .ghead .spacer { flex: 1; }
+  #guide .ghead .lab { text-transform: none; letter-spacing: 0; font-weight: 500; border: 1px solid var(--border);
+                       border-radius: 999px; padding: 0 7px; }
+  #guide .ghead button { width: 22px; height: 22px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 13px; }
+  #guide .ghead button:hover { color: var(--fg); }
+  #guide h3 { margin: 6px 0 4px; font-size: 14px; color: var(--fg); }
+  #guide p { margin: 0 0 6px; color: var(--muted); line-height: 1.45; }
+  #guide p b { color: var(--fg); font-weight: 600; }
+  #guide .look { padding-left: 8px; border-left: 2px solid var(--ok); }
+  #guide .wait { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 6px;
+                 background: color-mix(in srgb, var(--warn) 10%, transparent); color: var(--fg); }
+  #guide .wait .spinner { flex: none; margin-top: 2px; }
+  #guide .gact { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  #guide .gact button { padding: 4px 12px; font-size: 12.5px; }
+  #guide .gact .spacer { flex: 1; }
+  #guide .gact a { font-size: 12px; color: var(--muted); cursor: pointer; }
+  #guide .gact a:hover { color: var(--fg); }
+  #guide .bar { height: 3px; border-radius: 2px; background: var(--border); margin-top: 10px; overflow: hidden; }
+  #guide .bar i { display: block; height: 100%; background: var(--accent); transition: width .4s; }
+  #guideRing { fill: none; stroke: var(--accent); stroke-width: 2.5; pointer-events: none;
+               animation: ring 1.4s ease-in-out infinite; }
+  #guideRing[hidden] { display: none; }
+  @keyframes ring { 50% { stroke-opacity: .25; stroke-width: 5; } }
+  @media (prefers-reduced-motion: reduce) { #guideRing { animation: none; } }
+  #guideLink { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: visible; }
+  #guideLink line { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  #guideLink circle { fill: var(--accent); }
+  #guideLink[hidden] { display: none; }
+  #gtip { position: fixed; z-index: 30; max-width: 320px; padding: 8px 10px; pointer-events: none;
+          background: var(--panel); color: var(--muted); border: 1px solid var(--border); border-radius: 8px;
+          box-shadow: 0 6px 24px rgba(0,0,0,.22); font-size: 12px; line-height: 1.45; }
+  #gtip[hidden] { display: none; }
+  #gtip b { display: block; color: var(--fg); font-size: 12.5px; margin-bottom: 2px; }
+  #gtip .act { color: var(--accent); }
+  /* The suggested steps follow the guide: done ones ticked, the current one marked. */
+  body.guided #steps li.done { opacity: .6; }
+  body.guided #steps li.done::marker { content: "✓  "; color: var(--ok); }
+  body.guided #steps li.now { color: var(--fg); }
+  body.guided #steps li.now::marker { color: var(--accent); font-weight: 700; }
+
   /* ── The action pop-up ── */
   #act { width: min(960px, calc(100vw - 32px)); max-height: min(90vh, 1000px); padding: 0;
          border: 1px solid var(--border); border-radius: 10px; background: var(--panel); color: var(--fg);
@@ -242,6 +291,9 @@
       Workshop <span aria-hidden="true">▾</span></button>
     <div class="wlist" id="wmenu" role="menu" aria-label="Workshop components" hidden></div>
   </div>
+  <button id="guideBtn" type="button" aria-pressed="false" title="Guide: point to the next step, and explain every box and button on hover">
+    <svg class="wicon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>
+    Guide</button>
   <button id="theme" type="button"></button>
 </header>
 
@@ -406,6 +458,7 @@
 
       <!-- The buttons, drawn by the script below from PILLS -->
       <g id="pills"></g>
+      <rect id="guideRing" rx="13" hidden/>
     </svg>
 
   <!-- Floating: the suggested steps (drag it by its title, collapse it with the button) -->
@@ -438,6 +491,10 @@
     </div>
   </section>
 
+  <!-- Floating: the guide's callout, placed next to the button of the next step -->
+  <section id="guide" class="float" aria-live="polite" aria-label="Guide: the next step" hidden></section>
+  <svg id="guideLink" aria-hidden="true" hidden><line/><circle r="3.5"/></svg>
+
   <div id="zoomHint" class="float">Drag to pan · scroll or pinch to zoom · double-click to reset</div>
   <div id="zoomCtl" class="float" role="group" aria-label="Zoom">
     <button type="button" id="zoomOut" title="Zoom out (−)" aria-label="Zoom out">−</button>
@@ -469,6 +526,7 @@
     <div id="actResults"></div>
   </div>
 </dialog>
+<div id="gtip" role="tooltip" hidden></div>
 
 <script>
 const MAX_ROWS = 200;
@@ -513,6 +571,9 @@ $("wmenu").addEventListener("keydown", e => {
   else if (e.key === "Escape") { wmenuOpen(false); $("wmenuBtn").focus(); }
 });
 let session = null, sql = null, status = null;
+// The guide's state (see "The guide" below), declared up front: restoring the panels' saved
+// layout re-fits the diagram, which re-places the guide's callout, before that code runs.
+let guideOn = store.get("pipeline.guide") !== "off", guideStep = null;
 
 // ── Diagram buttons ──────────────────────────────────────────────────────────
 // [x, y, width, label, action, target]. Actions: view / create (a box), deploy (an
@@ -626,6 +687,7 @@ function paint() {
   setPill(pill("start", "tiering"), tj === "RUNNING" ? "● Running" : tj ? "… Starting" : "Start",
           tj ? "running" : status.tiering?.available ? "primary" : "off", "Start the tiering service");
   if ($("act").open) refreshDialog();
+  guideUpdate();
 }
 
 let polling = false, bootstrapping = false;
@@ -690,6 +752,7 @@ const editor = CodeMirror.fromTextArea($("actSql"), {
 });
 
 function onPill(action, target) {
+  guideSeen(action, target);
   if (action === "open") { const [port, path] = LINKS[target]; window.open(`${location.protocol}//${host}:${port}${path}`, "_blank"); return; }
   openDialog(action, target);
 }
@@ -963,6 +1026,7 @@ function applyView() {
   const w = r.width / scale, h = r.height / scale;
   svg.setAttribute("viewBox", `${view.cx - w / 2} ${view.cy - h / 2} ${w} ${h}`);
   $("zoomLevel").textContent = Math.round(view.z * 100) + "%";
+  guidePlace();
 }
 function fit() {
   // Centre the content in the fit area, which may sit right of the stage's own centre.
@@ -1106,6 +1170,273 @@ $("stepsHead").addEventListener("dblclick", e => {   // back to the default spot
 $("stepsHead").title = "Drag to move · double-click to put it back";
 if (stepsPos?.collapsed) setCollapsed(true);
 
+// ── The guide ────────────────────────────────────────────────────────────────
+// For whoever runs the workshop: a callout pointing at the next step's button, with what
+// it does and what to look for after, and on hover an explanation of every box, arrow and
+// button. Steps are done when the status says so; a step that only reads (View data, Open)
+// is done once its pop-up was opened, remembered per session. On or off from the header,
+// remembered per browser under pipeline.guide.
+const GUIDE = [
+  { a: "create", t: "orders_log", li: 0, lab: "Lab 1 · Steps 1–2", title: "Create the Fluss table orders_log",
+    what: "Registers the <b>fluss</b> catalog in Flink, creates the <b>orders</b> database, and in it a <b>Log table</b>: an append-only, ordered store for every order event.",
+    look: "The box goes from dashed to solid: the table exists, still empty.",
+    done: s => s.nodes.orders_log.exists },
+  { a: "create", t: "kafka", li: 0, lab: "Lab 1 · Step 3", title: "Register the Kafka source",
+    what: "Describes the <b>orders_log</b> topic to Flink as the table <b>orders_log_kafka</b>: JSON, with event time and a 5 s watermark. Nothing is read yet — a table is only a definition.",
+    look: "The Kafka box turns green: the generator has been publishing all along.",
+    done: s => s.nodes.kafka.exists },
+  { a: "deploy", t: "kafka_to_fluss", li: 0, lab: "Lab 1 · Step 4", title: "Deploy kafka-to-fluss",
+    what: "Submits an <b>INSERT INTO … SELECT</b> as a streaming Flink job: it reads the topic from the earliest offset and appends every event to orders_log, for as long as it runs.",
+    look: "The arrow starts flowing; orders_log goes amber, then green when its first rows are confirmed.",
+    done: s => s.edges.kafka_to_fluss.state === "running",
+    until: s => s.nodes.orders_log.state === "live", wait: "orders_log turns green once Flink confirms its first rows — usually within 30 s." },
+  { a: "view", t: "orders_log", li: 0, lab: "Lab 1 · Step 5", title: "Look at the events in Fluss",
+    what: "A streaming <b>SELECT</b> on orders_log: rows keep arriving while the pop-up is open, and closing it cancels the query.",
+    look: "Each order appears once per status it reaches: PLACED, PAID, SHIPPED, DELIVERED." },
+  { a: "create", t: "product_lookup", li: 1, lab: "Lab 2 · Step 6", title: "Create the Fluss table product_lookup",
+    what: "A <b>primary-key table</b>: one row per product, updated in place. Its key index is what makes fast lookup joins possible later.",
+    look: "The box turns solid.",
+    done: s => s.nodes.product_lookup.exists },
+  { a: "create", t: "product_catalog", li: 1, lab: "Lab 2 · Step 7", title: "Register the PostgreSQL CDC source",
+    what: "Describes the shop's <b>product_catalog</b> as a <b>postgres-cdc</b> table: Flink reads a snapshot of the 500 products, then every insert, update and delete from the write-ahead log.",
+    look: "The PostgreSQL box turns green.",
+    done: s => s.nodes.product_catalog.exists },
+  { a: "deploy", t: "pgcdc_to_fluss", li: 1, lab: "Lab 2 · Step 8", title: "Deploy pgcdc-to-fluss",
+    what: "Streams the snapshot, then every change, into product_lookup. An UPDATE in PostgreSQL becomes an update of the same key in Fluss.",
+    look: "product_lookup goes amber, then green.",
+    done: s => s.edges.pgcdc_to_fluss.state === "running",
+    until: s => s.nodes.product_lookup.state === "live", wait: "product_lookup turns green once its first rows are confirmed." },
+  { a: "create", t: "orders_enriched", li: 2, lab: "Lab 2 · Step 9", title: "Create the Fluss table orders_enriched",
+    what: "A Log table for order events with their product's name, category and price — the table that is later tiered to Iceberg.",
+    look: "The box turns solid.",
+    done: s => s.nodes.orders_enriched.exists },
+  { a: "deploy", t: "enrichment", li: 2, lab: "Lab 2 · Step 10", title: "Deploy product-enrichment",
+    what: "A <b>lookup join</b>: each order event looks up its product in product_lookup <i>as of now</i> and is written, enriched, to orders_enriched. No join state builds up in Flink: the lookup goes to Fluss's key index.",
+    look: "Both arrows into orders_enriched start flowing; the box goes amber, then green.",
+    done: s => s.edges.enrichment.state === "running",
+    until: s => s.nodes.orders_enriched.state === "live", wait: "orders_enriched turns green once its first rows are confirmed." },
+  { a: "view", t: "orders_enriched", li: 2, lab: "Lab 2 · Step 10", title: "Look at the enriched events",
+    what: "A streaming SELECT on orders_enriched.",
+    look: "Every event now carries product_name, category and unit_price." },
+  { a: "enable", t: "tiering", li: 3, lab: "Lab 3 · Step 11", title: "Opt orders_enriched in to tiering",
+    what: "An <b>ALTER TABLE</b>, not a job: <code>'table.datalake.enabled' = 'true'</code> tells Fluss to copy this table to the lake.",
+    look: "The “opt in” arrow lights up. Nothing is copied until the tiering service runs.",
+    done: s => s.edges.tiering.state === "running" },
+  { a: "start", t: "tiering", li: 3, lab: "Lab 3 · Step 12", title: "Start the tiering service",
+    what: "One Flink job, shipped as a JAR, that serves every opted-in table: it writes their new data as Parquet files on MinIO and commits an Iceberg snapshot through Lakekeeper, once per checkpoint.",
+    look: "The service box turns green; Lakekeeper and MinIO follow after the first commit.",
+    done: s => s.tiering?.job?.state === "RUNNING",
+    until: s => s.nodes.lake.state === "live", wait: "Lakekeeper turns green after the first commit — about a minute (one checkpoint, every 30 s, plus the write)." },
+  { a: "view", t: "lake", li: 3, lab: "Lab 3", title: "See the Iceberg snapshots",
+    what: "Lists orders_enriched's Iceberg snapshots through Fluss's <b>$lake</b> view: one per tiering commit.",
+    look: "A new snapshot appears about every 30 s while the service runs." },
+  { a: "view", t: "union", li: 4, lab: "Lab 4 · Step 15", title: "Run the union read",
+    what: "Two counts side by side: Iceberg alone (<b>$lake</b>), and the table as Flink reads it by default — Iceberg's history <b>plus</b> the rows still only in Fluss.",
+    look: "The union read has more events and a newer latest_event: Fluss fills the gap since the last commit." },
+  { a: "create", t: "iceberg_flink", li: 5, lab: "Lab 4 · Step 18 bonus", title: "Register Iceberg as a Flink catalog",
+    what: "Registers Lakekeeper in Flink as the catalog <b>iceberg</b>: Flink can read the Iceberg tables directly, with no Fluss in the path.",
+    look: "The Flink · Iceberg box turns solid.",
+    done: s => s.nodes.iceberg_flink.exists },
+  { a: "view", t: "iceberg_flink", li: 5, lab: "Lab 4 · Step 18 bonus", title: "Time travel to the first snapshot",
+    what: "Reads orders_enriched as of its <b>oldest snapshot</b>, with an OPTIONS('snapshot-id') hint. The id is filled in for you.",
+    look: "Fewer events than now: the table as it was at the first commit." },
+  { a: "deploy", t: "revenue", li: 6, lab: "Lab 5 · Step 19", title: "Deploy revenue-analytics-sink",
+    what: "1-minute <b>TUMBLE</b> windows per category over orders_enriched, upserted into the data warehouse's <b>revenue_1m</b> through the postgres JDBC catalog. It starts with the history (from Iceberg), then keeps up live.",
+    look: "Revenue analytics turns green; revenue_1m follows when rows are confirmed.",
+    done: s => s.edges.revenue.state === "running",
+    until: s => s.nodes.revenue_1m.state === "live", wait: "revenue_1m turns green once a window is written — past windows right away, then one per minute." },
+  { a: "view", t: "revenue_1m", li: 6, lab: "Lab 5 · Step 19", title: "Look at revenue_1m",
+    what: "A bounded read of the warehouse table, newest window first.",
+    look: "One row per minute and category: orders, revenue, the lifecycle counts." },
+  { a: "open", t: "grafana", li: 6, lab: "Lab 5 · Step 20", title: "Open the Grafana dashboard",
+    what: "The Order Analytics dashboard, reading revenue_1m.",
+    look: "A new point every minute. Hover a panel title's ⓘ for what it measures." },
+];
+// What each kind of button does, for the hover explanations.
+const ACTION_TIP = {
+  create: "Opens the CREATE statement. Edit it if you like, then run it.",
+  view: "Opens a query of this table and shows its rows live. Closing the pop-up cancels the query.",
+  deploy: "Opens the job's INSERT INTO statement; Deploy submits it as a long-running Flink job.",
+  enable: "Opens the ALTER TABLE that opts orders_enriched in to tiering.",
+  start: "Starts the tiering service's Flink job from its uploaded JAR.",
+  open: "Opens this tool in a new tab.",
+};
+const NODE_TIP = {
+  revenue_job: ["Revenue analytics", ABOUT.revenue],
+  minio: ["MinIO", "S3-compatible object storage: Iceberg's Parquet data files and metadata. The box counts the Parquet files of orders_enriched."],
+  trino: ["Trino", "A SQL engine reading the lakehouse catalog: the Iceberg tables, with no Flink or Fluss involved. Open it through CloudBeaver."],
+  grafana: ["Grafana", "The Order Analytics dashboard, reading revenue_1m from the data warehouse."],
+  tiering: ["Tiering service", ABOUT.tiering],
+  lake: ["Lakekeeper · Iceberg", ABOUT.lake],
+  commits: ["Commits", "Each checkpoint, the tiering service writes the new rows as Parquet and commits them as an Iceberg snapshot."],
+  tiering_edge: ["Opt in", ABOUT.enable],
+};
+const NODE_NAME = { kafka: "Kafka · orders_log topic", product_catalog: "PostgreSQL · product_catalog", orders_log: "fluss.orders.orders_log",
+  product_lookup: "fluss.orders.product_lookup", orders_enriched: "fluss.orders.orders_enriched", revenue_1m: "PostgreSQL · revenue_1m",
+  union: "Union read", iceberg_flink: "Flink · Iceberg", kafka_to_fluss: "kafka-to-fluss", pgcdc_to_fluss: "pgcdc-to-fluss",
+  enrichment: "product-enrichment", revenue: "revenue-analytics-sink" };
+
+const seenKey = () => `pipeline.guide.seen.${(session || "").slice(0, 8)}`;
+function seenSet() { try { return new Set(JSON.parse(store.get(seenKey()) || "[]")); } catch { return new Set(); } }
+function guideSeen(a, t) {
+  if (!session || !GUIDE.some(g => !g.done && g.a === a && g.t === t)) return;
+  const s = seenSet(); s.add(`${a}:${t}`); store.set(seenKey(), JSON.stringify([...s]));
+  guideUpdate();
+}
+const stepDone = (g, seen) => g.done ? !!status && g.done(status) : seen.has(`${g.a}:${g.t}`);
+
+function guideUpdate() {
+  document.body.classList.toggle("guided", guideOn);
+  $("guideBtn").setAttribute("aria-pressed", guideOn);
+  const lis = [...$("steps").querySelectorAll("ol > li")];
+  if (!guideOn || !status) {
+    $("guide").hidden = true; $("guideRing").toggleAttribute("hidden", true); lis.forEach(li => li.classList.remove("done", "now"));
+    return;
+  }
+  const seen = seenSet(), done = GUIDE.map(g => stepDone(g, seen));
+  const i = done.indexOf(false);
+  guideStep = i < 0 ? null : GUIDE[i];
+  // Still settling: a done step whose result is not visible yet (a box not green yet).
+  const waiting = GUIDE.find((g, k) => done[k] && g.until && !g.until(status));
+  lis.forEach((li, k) => {
+    const mine = GUIDE.map((g, j) => [g, j]).filter(([g]) => g.li === k);
+    li.classList.toggle("done", mine.length > 0 && mine.every(([, j]) => done[j]));
+    li.classList.toggle("now", !!guideStep && guideStep.li === k);
+  });
+  const n = done.filter(Boolean).length;
+  const bar = `<div class="bar" aria-hidden="true"><i style="width:${Math.round(100 * n / GUIDE.length)}%"></i></div>`;
+  const waitHtml = waiting ? `<p class="wait"><span class="spinner" aria-hidden="true"></span><span>${waiting.wait}</span></p>` : "";
+  if (!guideStep) {
+    $("guide").innerHTML = `<div class="ghead">Guide<span class="spacer"></span><button type="button" data-g="off" title="Turn the guide off" aria-label="Turn the guide off">✕</button></div>
+      <h3>✓ The whole pipeline is built</h3>
+      <p>Kafka and PostgreSQL flow through Fluss into Iceberg and the data warehouse; Flink, Trino and Grafana read it back. Every box and arrow still explains itself on hover.</p>${waitHtml}
+      <div class="gact"><a data-g="restart" role="button" tabindex="0">Start the guide again</a></div>${bar}`;
+  } else {
+    const g = guideStep;
+    $("guide").innerHTML = `<div class="ghead">Next · ${i + 1} of ${GUIDE.length}<span class="lab">${g.lab}</span><span class="spacer"></span>
+        <button type="button" data-g="off" title="Turn the guide off" aria-label="Turn the guide off">✕</button></div>
+      <h3>${g.title}</h3>
+      <p>${g.what}</p>
+      <p class="look">${g.look}</p>${waitHtml}
+      <div class="gact"><button type="button" class="primary" data-g="do">${pillLabel(g)} →</button>
+        <button type="button" data-g="show" title="Pan and zoom to this step's button">Show me</button>
+        <span class="spacer"></span>${g.done ? "" : `<a data-g="skip" role="button" tabindex="0" title="Mark it done without opening it">Skip</a>`}</div>${bar}`;
+  }
+  $("guide").hidden = false;
+  guidePlace();
+}
+const pillLabel = g => ({ create: "Create", view: "View data", deploy: "Deploy", enable: "Enable", start: "Start", open: "Open" })[g.a];
+
+// The callout goes where it hides the least: in the free space above or below the diagram,
+// clear of the Suggested steps panel, and only next to the button itself when there is no
+// such space. A dashed line joins it to the button, which pulses.
+function guidePlace() {
+  const ring = $("guideRing"), link = $("guideLink"), box = $("guide");
+  if (!guideOn || box.hidden || !guideStep) {
+    ring.toggleAttribute("hidden", true); link.toggleAttribute("hidden", true);
+    // All done: the callout rests in the top-right corner.
+    if (guideOn && !guideStep && !box.hidden) Object.assign(box.style, { left: "auto", right: "16px", top: "16px", bottom: "auto" });
+    return;
+  }
+  const p = pill(guideStep.a, guideStep.t);
+  if (!p) return;
+  const r = p.querySelector("rect");
+  const x = +r.getAttribute("x"), y = +r.getAttribute("y"), w = +r.getAttribute("width");
+  Object.entries({ x: x - 4, y: y - 4, width: w + 8, height: 28 }).forEach(([k, v]) => ring.setAttribute(k, v));
+  ring.toggleAttribute("hidden", false);
+
+  const sr = stage.getBoundingClientRect(), pr = p.getBoundingClientRect();
+  const sw = sr.width, sh = sr.height, bw = box.offsetWidth, bh = box.offsetHeight, M = 16, gap = 18;
+  // The diagram's top and bottom edges on screen, from the current view.
+  const scale = view.z * fitScale(), vbY = view.cy - sh / scale / 2;
+  const diagTop = (CONTENT.y - vbY) * scale, diagBottom = (CONTENT.y + CONTENT.h - vbY) * scale;
+  const pin = { x: pr.left + pr.width / 2 - sr.left, top: pr.top - sr.top, bottom: pr.bottom - sr.top };
+  const steps = $("steps"), sp = steps.classList.contains("collapsed") ? null : (() => {
+    const q = steps.getBoundingClientRect(); return { l: q.left - sr.left, r: q.right - sr.left, t: q.top - sr.top, b: q.bottom - sr.top };
+  })();
+  const place = top => {
+    let left = Math.min(Math.max(pin.x - bw / 2, M), sw - bw - M);
+    if (sp && left < sp.r + M && left + bw > sp.l - M && top < sp.b && top + bh > sp.t) {
+      if (sp.r + M + bw <= sw - M) left = Math.max(left, sp.r + M);   // to the right of the panel
+      else return null;
+    }
+    return top >= M && top + bh <= sh - M ? { left, top } : null;
+  };
+  const spot = place(diagBottom + 24) || place(diagTop - 24 - bh) || place(pin.bottom + gap) || place(pin.top - gap - bh)
+    || { left: Math.min(Math.max(pin.x - bw / 2, M), sw - bw - M), top: Math.min(Math.max(pin.bottom + gap, M), sh - bh - M) };
+  Object.assign(box.style, { left: spot.left + "px", top: spot.top + "px", right: "auto", bottom: "auto" });
+
+  // The connector: from the callout's nearest edge to the button.
+  const below = spot.top > pin.bottom;
+  const x1 = Math.min(Math.max(pin.x, spot.left + 16), spot.left + bw - 16), y1 = below ? spot.top : spot.top + bh;
+  const y2 = below ? pin.bottom + 4 : pin.top - 4;
+  const line = link.querySelector("line"), dot = link.querySelector("circle");
+  Object.entries({ x1, y1, x2: pin.x, y2 }).forEach(([k, v]) => line.setAttribute(k, v));
+  dot.setAttribute("cx", pin.x); dot.setAttribute("cy", y2);
+  // No line when the callout already touches the button, or the button is off screen.
+  const visible = pin.x >= 0 && pin.x <= sw && pin.top >= 0 && pin.bottom <= sh;
+  link.toggleAttribute("hidden", !visible || Math.abs(y2 - y1) < gap + 4);
+}
+
+$("guide").addEventListener("click", e => {
+  const k = e.target.closest("[data-g]")?.dataset.g;
+  if (k === "off") setGuide(false);
+  else if (k === "do") onPill(guideStep.a, guideStep.t);
+  else if (k === "skip") guideSeen(guideStep.a, guideStep.t);
+  else if (k === "restart") { store.set(seenKey(), null); guideUpdate(); }
+  else if (k === "show") {
+    const [x, y, w] = PILLS.find(q => q[4] === guideStep.a && q[5] === guideStep.t);
+    view = { cx: x + w / 2, cy: y + 60, z: Math.max(view.z, 1.6) }; atFit = false; applyView();
+  }
+});
+$("guide").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("a[data-g]")) e.target.click(); });
+// Keep wheel and drags on the callout from panning the diagram behind it.
+$("guide").addEventListener("pointerdown", e => e.stopPropagation());
+function setGuide(on) {
+  guideOn = on; store.set("pipeline.guide", on ? null : "off");
+  if (!on) $("gtip").hidden = true;
+  guideUpdate();
+}
+$("guideBtn").onclick = () => setGuide(!guideOn);
+
+// Hover (or keyboard focus) on a box, an arrow or a button explains it, while the guide is on.
+function tipFor(el) {
+  const pl = el.closest(".pill");
+  if (pl) {
+    const { action, target } = pl.dataset;
+    if (pl.classList.contains("src")) return [pl.getAttribute("aria-label"), "Opens the source system itself, outside Flink."];
+    const name = NODE_NAME[target] || NODE_TIP[target]?.[0] || target;
+    const about = ABOUT[action === "enable" ? "enable" : action === "create" && target === "iceberg_flink" ? "iceberg_flink_create" : target] || NODE_TIP[target]?.[1] || "";
+    return [`${pillLabel({ a: action })} · ${name}`, `<span class="act">${ACTION_TIP[action]}</span> ${about}`];
+  }
+  const node = el.closest(".node[data-node]"), job = el.closest(".job[data-edge]");
+  if (node) {
+    const n = node.dataset.node, st = node.dataset.state;
+    const [title, text] = NODE_TIP[n] || [NODE_NAME[n] || n, ABOUT[n] || ""];
+    return [title + (st ? ` — ${STATE_LABEL[st] || st}` : ""), text];
+  }
+  if (job) {
+    const e = job.dataset.edge;
+    const [title, text] = e === "tiering" ? NODE_TIP.tiering_edge : NODE_TIP[e] || [NODE_NAME[e] || e, ABOUT[e] || ""];
+    return [title, text];
+  }
+  return null;
+}
+function showTip(el, x, y) {
+  const t = guideOn && !svg.classList.contains("panning") && tipFor(el);
+  if (!t || !t[1]) { $("gtip").hidden = true; return; }
+  $("gtip").innerHTML = `<b>${esc(t[0])}</b>${t[1]}`;
+  $("gtip").hidden = false;
+  const w = $("gtip").offsetWidth, h = $("gtip").offsetHeight;
+  $("gtip").style.left = Math.min(x + 14, innerWidth - w - 8) + "px";
+  $("gtip").style.top = (y + 18 + h > innerHeight - 8 ? y - h - 12 : y + 18) + "px";
+}
+svg.addEventListener("pointermove", e => { if (e.pointerType === "mouse") showTip(e.target, e.clientX, e.clientY); });
+svg.addEventListener("pointerleave", () => { $("gtip").hidden = true; });
+svg.addEventListener("focusin", e => { const r = e.target.getBoundingClientRect(); showTip(e.target, r.left, r.bottom); });
+svg.addEventListener("focusout", () => { $("gtip").hidden = true; });
+document.addEventListener("pointerdown", () => { $("gtip").hidden = true; });
+
 // ── The catalog browser (catalog.js) ─────────────────────────────────────────
 // The pop-ups are modal, so the panel cannot be clicked while one is open: a
 // double-clicked name is copied instead, ready to paste into a pop-up's SQL.
@@ -1132,6 +1463,7 @@ $("structInsert").title = "Copy the table's name, to paste into a pop-up's SQL";
 
 // ── Start ────────────────────────────────────────────────────────────────────
 drawPills();
+guideUpdate();
 placeSteps();
 fit();
 (async () => {
