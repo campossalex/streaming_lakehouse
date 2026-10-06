@@ -628,19 +628,28 @@ function paint() {
   if ($("act").open) refreshDialog();
 }
 
-let polling = false, bootstrapping = false;
+let polling = false, bootstrapping = false, bootstrapFailed = null;   // { session, error }
 async function poll() {
   if (polling || !session) return;
   polling = true;
   try {
     status = await api(`/api/pipeline/status/${session}`);
-    if (status.bootstrap && !bootstrapping) {   // the postgres catalog for revenue_1m is missing
+    if (status.bootstrap && !bootstrapping && bootstrapFailed?.session !== session) {   // the postgres catalog for revenue_1m is missing
       bootstrapping = true;
       setStatus("registering the postgres catalog…");
+      // Caught here, once per session: the gateway's stack trace mentions "session", so in
+      // the catch below it would pass for an expired session, and every poll would open a
+      // new one (which never expire) and fail the same way.
       try { await api(`/api/pipeline/bootstrap/${session}`, {}); status = await api(`/api/pipeline/status/${session}`); }
+      catch (e) {
+        const cause = e.message.split("\n").filter(l => l.startsWith("Caused by:")).pop();
+        bootstrapFailed = { session, error: (cause || e.message.split("\n")[0]).replace(/^Caused by:\s*(\w+\.)*/, "") };
+      }
       finally { bootstrapping = false; }
     }
-    setStatus(`session ${session.slice(0, 8)} · shared with the SQL editor`);
+    if (status.bootstrap && bootstrapFailed?.session === session)
+      setStatus("could not register the postgres catalog: " + bootstrapFailed.error, true);
+    else setStatus(`session ${session.slice(0, 8)} · shared with the SQL editor`);
     paint();
   } catch (e) {
     if (/session|410|not found/i.test(e.message)) { session = null; store.set("session", null); await ensureSession(); catalogReload(); }
