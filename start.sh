@@ -108,12 +108,11 @@ STEPS
 
 # ── Step 1: Download connector JARs ───────────────────────────────────────────
 
-if [ ! -f lib/tiering/fluss-flink-tiering-0.9.1-incubating.jar ] || [ -z "$(ls -A lib/*.jar 2>/dev/null)" ]; then
-  echo "==> Downloading connector JARs..."
-  bash download-jars.sh
-else
-  echo "==> [skip] lib/ already populated ($(ls lib/*.jar 2>/dev/null | wc -l | tr -d ' ') JARs + tiering)"
-fi
+# Always run: it skips every JAR already present, so a lib/ that is only partly populated
+# gets the missing ones — e.g. without the JDBC JARs every session's bootstrap fails on
+# CREATE CATALOG postgres.
+echo "==> Downloading connector JARs (present ones are skipped)..."
+bash download-jars.sh
 
 # ── Step 2: Start Docker Compose services ─────────────────────────────────────
 
