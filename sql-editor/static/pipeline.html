@@ -732,7 +732,8 @@ function paint() {
   guideUpdate();
 }
 
-let polling = false, bootstrapping = false;
+let polling = false, bootstrapping = false, bootstrapError = null, bootstrapRetry = 0;
+const BOOTSTRAP_RETRY = 30000;
 async function poll() {
   if (polling || !session) return;
   polling = true;
@@ -740,23 +741,43 @@ async function poll() {
     status = await api(`/api/pipeline/status/${session}`);
     // The postgres catalog for revenue_1m is missing, or a running pipeline's source tables
     // (a full ./start.sh created them only in its own SQL Client sessions).
-    if (status.bootstrap && !bootstrapping) {
+    // A failure is the stack's, not the session's (e.g. a missing connector JAR): it stays
+    // on screen and is retried every BOOTSTRAP_RETRY, not on every poll.
+    if (status.bootstrap && !bootstrapping && Date.now() >= bootstrapRetry) {
       bootstrapping = true;
       setStatus("registering the pipeline's tables in this session…");
       try {
         const b = await api(`/api/pipeline/bootstrap/${session}`, {});
+        bootstrapError = null;
         status = await api(`/api/pipeline/status/${session}`);
         if (b.sources?.length) catalogReload();
+      } catch (e) {
+        bootstrapError = rootCause(e.message);
+        bootstrapRetry = Date.now() + BOOTSTRAP_RETRY;
       } finally { bootstrapping = false; }
     }
-    setStatus(`session ${session.slice(0, 8)} · shared with the SQL editor`);
+    if (bootstrapError && status.bootstrap) setStatus("could not register the pipeline's tables: " + bootstrapError, true);
+    else setStatus(`session ${session.slice(0, 8)} · shared with the SQL editor`);
     paint();
   } catch (e) {
-    if (/session|410|not found/i.test(e.message)) { session = null; store.set("session", null); await ensureSession(); catalogReload(); }
-    else setStatus("status unavailable: " + e.message.split("\n")[0], true);
+    if (/session|410|not found/i.test(e.message.split("\n")[0])) { session = null; store.set("session", null); await ensureSession(); catalogReload(); }
+    else setStatus("status unavailable: " + rootCause(e.message), true);
   } finally { polling = false; }
 }
-function setStatus(t, bad) { $("status").textContent = t; $("status").className = bad ? "bad" : ""; }
+// The gateway's errors are whole Java stack traces: the last "Caused by:" says what went
+// wrong, and the lines after it (up to the next "at ...") often say why.
+function rootCause(msg) {
+  const lines = msg.split("\n").map(l => l.trim());
+  const i = lines.map(l => l.startsWith("Caused by:")).lastIndexOf(true);
+  if (i < 0) return lines.find(l => l && !l.startsWith("<Exception")) || msg;
+  const out = [lines[i].replace(/^Caused by:\s*(\S+\.)?(\w+:\s*)?/, "")];
+  for (const l of lines.slice(i + 1)) {
+    if (l.startsWith("at ") || l.startsWith("...") || l.startsWith("End of exception")) break;
+    if (l) out.push(l);
+  }
+  return out.join(" ");
+}
+function setStatus(t, bad) { const s = $("status"); s.textContent = t; s.title = t; s.className = bad ? "bad" : ""; }
 
 // The editor's session if it is still alive, else a new one — stored under the same key,
 // so the editor picks it up too.
