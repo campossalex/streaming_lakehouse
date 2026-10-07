@@ -45,7 +45,7 @@
             overflow: hidden; text-overflow: ellipsis; }
   #status.bad { color: var(--err); }
   header a { color: var(--accent); font-size: 13px; text-decoration: none; }
-  /* The "Workshop" menu */
+  /* The "Components" menu */
   .wmenu { position: relative; }
   #wmenuBtn { display: inline-flex; align-items: center; gap: 6px; }
   #wmenuBtn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
@@ -288,8 +288,8 @@
   <div class="wmenu">
     <button type="button" id="wmenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="wmenu">
       <svg class="wicon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-      Workshop <span aria-hidden="true">▾</span></button>
-    <div class="wlist" id="wmenu" role="menu" aria-label="Workshop components" hidden></div>
+      Components <span aria-hidden="true">▾</span></button>
+    <div class="wlist" id="wmenu" role="menu" aria-label="Environment components" hidden></div>
   </div>
   <button id="guideBtn" type="button" aria-pressed="false" title="Guide: point to the next step, and explain every box and button on hover">
     <svg class="wicon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>
@@ -531,7 +531,7 @@
 <script>
 const MAX_ROWS = 200;
 const host = location.hostname;
-// ── The "Workshop" menu: every component of the environment, with its icon ────
+// ── The "Components" menu: every component of the environment, with its icon ────
 // Links are built from the host this page was opened on, like the homepage's, so they
 // work on localhost and on a remote VM alike. Icons: the diagram's own marks (#i-…), plus
 // three plain glyphs for the components that have none.
