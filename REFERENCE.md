@@ -176,7 +176,7 @@ persistent platform catalog.
 |--------|--------------------|------------------------------------------------------------------|
 | `fluss.orders.*` tables | In Fluss | **Still there** |
 | The `fluss`, `postgres` (and `iceberg`) catalog registrations | File-based CatalogStore, volume `catalog-store`, shared by `sql-client` and `sql-gateway` | **Still there** |
-| `orders_log_kafka`, `product_catalog_cdc` | Flink's in-memory `default_catalog` | **Gone** — re-run `ddl/02_sources.sql` |
+| `orders_log_kafka`, `product_catalog_cdc` | Flink's in-memory `source_catalog` (its built-in catalog, renamed with `table.builtin-catalog-name`) | **Gone** — re-run `ddl/02_sources.sql` |
 | Running jobs | Flink cluster | **Unaffected**: connector options were baked into the JobGraph at submission |
 
 So after a gateway restart, attendees only re-run `02_sources.sql`, and only if they

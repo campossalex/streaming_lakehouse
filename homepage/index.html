@@ -550,7 +550,7 @@ const TABLES = {
     about: "The raw event stream. One JSON message each time an order changes status, produced by the order-gen container, 5–20 events a second.",
     colsTitle: "Message fields (JSON)", cols: ORDER_COLS,
     facts: [
-      ["Flink table", "<code>orders_log_kafka</code> — in the in-memory <code>default_catalog</code>, so it is re-created in every new session"],
+      ["Flink table", "<code>orders_log_kafka</code> — in the in-memory <code>source_catalog</code>, so it is re-created in every new session"],
       ["Read from", "<code>earliest-offset</code>: a new job replays the whole topic"],
       ["Timestamp", "<code>event_time</code> arrives as <code>yyyy-MM-dd HH:mm:ss.SSS</code>, JSON's default SQL timestamp shape"],
       ["Written by", "order-gen"],

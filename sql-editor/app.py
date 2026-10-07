@@ -42,6 +42,8 @@ S3_ENDPOINT = os.environ.get("S3_ENDPOINT", "http://minio:9000").rstrip("/")
 S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY", "admin")
 S3_SECRET_KEY = os.environ.get("S3_SECRET_KEY", "password")
 S3_REGION = os.environ.get("S3_REGION", "us-east-1")
+# Flink's built-in, in-memory catalog: table.builtin-catalog-name in docker-compose.yml.
+BUILTIN_CATALOG = os.environ.get("BUILTIN_CATALOG", "source_catalog")
 
 app = Flask(__name__, static_folder="static")
 
@@ -559,8 +561,10 @@ def catalog(session):
     c, d, t = (request.args.get(k) for k in ("catalog", "database", "table"))
     try:
         if not c:
+            # The built-in catalog first (the session's own tables), then the rest A–Z.
             _, rows = query_rows(session, "SHOW CATALOGS")
-            return jsonify({"items": [{"name": r[0]} for r in rows]})
+            ordered = sorted((r[0] for r in rows), key=lambda n: (n != BUILTIN_CATALOG, n))
+            return jsonify({"items": [{"name": n} for n in ordered]})
         if not d:
             _, rows = query_rows(session, f"SHOW DATABASES IN {ident(c)}")
             return jsonify({"items": [{"name": r[0]} for r in rows]})
@@ -585,19 +589,21 @@ def catalog(session):
 # Box -> its table, and the arrow (job) that feeds it. `listed` is the name SHOW TABLES
 # prints when it differs from the table's own (the JDBC catalog qualifies the schema).
 NODES = {
-    "kafka":           {"table": ("default_catalog", "default_database", "orders_log_kafka"), "source": True},
-    "product_catalog": {"table": ("default_catalog", "default_database", "product_catalog_cdc"), "source": True},
+    "kafka":           {"table": (BUILTIN_CATALOG, "default_database", "orders_log_kafka"), "source": True},
+    "product_catalog": {"table": (BUILTIN_CATALOG, "default_database", "product_catalog_cdc"), "source": True},
     "orders_log":      {"table": ("fluss", "orders", "orders_log"), "feed": "kafka_to_fluss"},
     "product_lookup":  {"table": ("fluss", "orders", "product_lookup"), "feed": "pgcdc_to_fluss"},
     "orders_enriched": {"table": ("fluss", "orders", "orders_enriched"), "feed": "enrichment"},
     "revenue_1m":      {"table": ("postgres", "dwh", "revenue_1m"), "listed": "public.revenue_1m",
                         "feed": "revenue", "precreated": True},
+    "order_status":    {"table": ("fluss", "orders", "order_status"), "feed": "order_status"},   # bonus track
 }
 EDGES = {
     "kafka_to_fluss": {"from": ["kafka"], "to": "orders_log", "file": "jobs/10_kafka_to_fluss.sql"},
     "pgcdc_to_fluss": {"from": ["product_catalog"], "to": "product_lookup", "file": "jobs/20_pgcdc_to_fluss.sql"},
     "enrichment":     {"from": ["orders_log", "product_lookup"], "to": "orders_enriched", "file": "jobs/30_enrichment.sql"},
     "revenue":        {"from": ["orders_enriched"], "to": "revenue_1m", "file": "jobs/50_revenue.sql"},
+    "order_status":   {"from": ["orders_log"], "to": "order_status", "file": "jobs/40_order_status.sql"},
 }
 # Pre-created on page load: revenue_1m already exists in the warehouse (postgres-dwh), so Flink only needs
 # the postgres catalog. The two sources are not: attendees create them from their boxes.
@@ -645,6 +651,8 @@ def pipeline_sql():
     snapshots = next(b for t, b in explore if t.startswith("Lab 4, Step 18:"))
     iceberg_catalog = next(b for t, b in explore if t.startswith("Bonus: Iceberg's own catalog"))
     time_travel = next(b for t, b in explore if t.startswith("Bonus: time travel"))
+    status_view = next(b for t, b in explore if t.startswith("Bonus: the current state"))
+    status_tier = next(b for t, b in explore if t.startswith("Bonus, Step 23:"))
     enable = split_statements(read_sql("lake/enable_tiering.sql"))[0]
     return jsonify({
         "nodes": {
@@ -666,10 +674,13 @@ def pipeline_sql():
             "iceberg_flink": {"create": "-- Lab 4, Step 18 bonus: Lakekeeper as a Flink catalog of its own.\n" + iceberg_catalog,
                               "view": "-- Lab 4, Step 18 bonus: time travel, read by Flink straight from Iceberg.\n" + time_travel},
             "union": {"view": "-- The union read: Iceberg's history plus Fluss's fresh rows, next to Iceberg alone.\n" + union_view},
+            "order_status": {"create": catalog + "\n" + database + "\n" + section("ddl/01_fluss.sql", "Bonus Step 21:"),
+                             "view": "-- Bonus: the current state of every order, counted by status.\n" + status_view},
         },
         "edges": {
             **{e: {"sql": without_header(read_sql(spec["file"])) + RESET_NAME.lstrip("\n")} for e, spec in EDGES.items()},
             "tiering": {"sql": "-- Opt orders_enriched in: the tiering service starts committing it to Iceberg.\n" + enable + ";\n"},
+            "tier_order_status": {"sql": "-- Bonus Step 23: tier the PK table as well.\n" + status_tier},
         },
     })
 
@@ -726,13 +737,13 @@ def restore_sources(session):
     """Create in this session the source tables whose reading job runs (see SOURCES).
     Returns the boxes it created. Qualified, so a USE in the session does not misplace them."""
     running = {e for e in EDGES if any(j["state"] == "RUNNING" for j in edge_jobs(active_jobs(), e))}
-    listed = names(session, "SHOW TABLES IN `default_catalog`.`default_database`")
+    listed = names(session, f"SHOW TABLES IN {ident(BUILTIN_CATALOG, 'default_database')}")
     restored = []
     for node, ((rel, prefix), edge) in SOURCES.items():
         if edge in running and NODES[node]["table"][2] not in listed:
             for stmt in split_statements(section(rel, prefix)):
                 execute_and_wait(session, stmt.replace(
-                    "CREATE TABLE IF NOT EXISTS ", "CREATE TABLE IF NOT EXISTS `default_catalog`.`default_database`.", 1))
+                    "CREATE TABLE IF NOT EXISTS ", f"CREATE TABLE IF NOT EXISTS {ident(BUILTIN_CATALOG, 'default_database')}.", 1))
             restored.append(node)
     return restored
 
@@ -867,15 +878,25 @@ def parquet_count(location):
 
 
 tiering_on = False   # once true it stays true: tiering cannot be switched off again
+status_tiered = False   # the same, for the bonus order_status table
+
+
+def datalake_enabled(session, table):
+    """Whether SHOW CREATE TABLE has the table opted in to tiering."""
+    try:
+        ddl = query_rows(session, f"SHOW CREATE TABLE {ident(*table)}")[1][0][0]
+        return "'table.datalake.enabled' = 'true'" in ddl
+    except (GatewayError, IndexError):
+        return False
 
 
 @app.get("/api/pipeline/status/<session>")
 def pipeline_status(session):
-    global tiering_on
+    global tiering_on, status_tiered
     try:
         catalogs = names(session, "SHOW CATALOGS")
         listed = {
-            "default_catalog": names(session, "SHOW TABLES IN `default_catalog`.`default_database`"),
+            BUILTIN_CATALOG: names(session, f"SHOW TABLES IN {ident(BUILTIN_CATALOG, 'default_database')}"),
             "fluss": names(session, "SHOW TABLES IN `fluss`.`orders`") if "fluss" in catalogs else set(),
             "postgres": names(session, "SHOW TABLES IN `postgres`.`dwh`") if "postgres" in catalogs else set(),
         }
@@ -920,13 +941,14 @@ def pipeline_status(session):
     except (GatewayError, requests.RequestException):
         tiering = {"available": False, "job": None}
     if exists["orders_enriched"] and not tiering_on:
-        try:
-            ddl = query_rows(session, "SHOW CREATE TABLE `fluss`.`orders`.`orders_enriched`")[1][0][0]
-            tiering_on = "'table.datalake.enabled' = 'true'" in ddl
-        except (GatewayError, IndexError):
-            pass
+        tiering_on = datalake_enabled(session, NODES["orders_enriched"]["table"])
     if not exists["orders_enriched"]:
         tiering_on = False
+    if exists["order_status"] and not status_tiered:
+        status_tiered = datalake_enabled(session, NODES["order_status"]["table"])
+    if not exists["order_status"]:
+        status_tiered = False
+    nodes["order_status"]["tiered"] = status_tiered
     snapshot, files, first_snapshot = None, None, None
     try:
         meta = lake_table() if tiering_on else None

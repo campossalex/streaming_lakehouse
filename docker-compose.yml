@@ -103,6 +103,10 @@ x-flink-client-conf: &flink-client-conf |
   table.local-time-zone: UTC
   table.catalog-store.kind: file
   table.catalog-store.file.path: /opt/flink/catalog-store
+  # The built-in, in-memory catalog every session starts with ("default_catalog" by
+  # default). It holds only the Kafka and CDC source tables, which a new session must
+  # create again — the name says what it is for.
+  table.builtin-catalog-name: source_catalog
   execution.checkpointing.interval: 30s
   state.backend.type: hashmap
   state.checkpoints.dir: file:///tmp/flink-checkpoints

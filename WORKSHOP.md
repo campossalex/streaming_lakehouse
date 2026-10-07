@@ -72,7 +72,7 @@ CREATE CATALOG IF NOT EXISTS fluss WITH (
 ```
 
 > [!NOTE]
-> Check it worked with `SHOW CATALOGS;` — you should see `default_catalog` and `fluss`.
+> Check it worked with `SHOW CATALOGS;` — you should see `source_catalog` and `fluss`.
 > All Fluss tables in this lab live under `fluss.orders.*`.
 
 ### Step 2: Create the Fluss database and Log table
@@ -139,7 +139,7 @@ The generator emits `event_time` as `yyyy-MM-dd HH:mm:ss.SSS`, which is the JSON
 default SQL timestamp shape. Flink parses it straight into `TIMESTAMP(3)` — no
 intermediate `STRING` column or `TO_TIMESTAMP()` needed.
 
-This table lives in Flink's `default_catalog`, which is **in memory and per session**.
+This table lives in Flink's `source_catalog`, which is **in memory and per session**.
 Flink only holds the definition; there is nothing in Kafka to store it in.
 
 > [!NOTE]
