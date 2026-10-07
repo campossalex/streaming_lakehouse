@@ -268,7 +268,8 @@ async function openSession() {
   try {
     const s = await api("/api/session", { ddl });
     session = s.session; store.set("session", session);
-    setStatus(`session ${session.slice(0, 8)} · ${s.ddl ? s.ddl + " DDL statements loaded" : "new, empty"}`);
+    setStatus(`session ${session.slice(0, 8)} · ${s.ddl ? s.ddl + " DDL statements loaded"
+      : s.sources?.length ? "new · the running pipeline's source tables loaded" : "new, empty"}`);
     catalogReload();
   } catch (e) { setStatus(e.message.split("\n")[0], true); }
   setBusy(false);

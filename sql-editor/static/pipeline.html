@@ -696,11 +696,16 @@ async function poll() {
   polling = true;
   try {
     status = await api(`/api/pipeline/status/${session}`);
-    if (status.bootstrap && !bootstrapping) {   // the postgres catalog for revenue_1m is missing
+    // The postgres catalog for revenue_1m is missing, or a running pipeline's source tables
+    // (a full ./start.sh created them only in its own SQL Client sessions).
+    if (status.bootstrap && !bootstrapping) {
       bootstrapping = true;
-      setStatus("registering the postgres catalog…");
-      try { await api(`/api/pipeline/bootstrap/${session}`, {}); status = await api(`/api/pipeline/status/${session}`); }
-      finally { bootstrapping = false; }
+      setStatus("registering the pipeline's tables in this session…");
+      try {
+        const b = await api(`/api/pipeline/bootstrap/${session}`, {});
+        status = await api(`/api/pipeline/status/${session}`);
+        if (b.sources?.length) catalogReload();
+      } finally { bootstrapping = false; }
     }
     setStatus(`session ${session.slice(0, 8)} · shared with the SQL editor`);
     paint();

@@ -416,7 +416,14 @@ def open_session():
                 execute_and_wait(session, stmt)
     except (GatewayError, requests.RequestException) as e:
         return json_error(f"could not open a session with the DDL loaded:\n{e}")
-    return jsonify({"session": session, "ddl": len(DDL) if load_ddl else 0})
+    # A pipeline already running (full ./start.sh): its source tables, so they can be queried.
+    restored = []
+    if not load_ddl:
+        try:
+            restored = restore_sources(session)
+        except (GatewayError, requests.RequestException):
+            pass
+    return jsonify({"session": session, "ddl": len(DDL) if load_ddl else 0, "sources": restored})
 
 
 @app.post("/api/split")
@@ -596,6 +603,15 @@ EDGES = {
 # the postgres catalog. The two sources are not: attendees create them from their boxes.
 BOOTSTRAP_FILES = ["ddl/03_postgres.sql"]
 
+# ...unless the pipeline already reads them. A full ./start.sh (not --services-only) submits
+# the jobs through submit.sh, whose SQL Client sessions are the only ones that ever had the
+# source tables: they live in the in-memory default catalog. So a browser session gets
+# them too — the same IF NOT EXISTS DDL — once the job reading each one is running.
+SOURCES = {   # box -> (its DDL section, the arrow whose job reads it)
+    "kafka": (("ddl/02_sources.sql", "Step 3:"), "kafka_to_fluss"),
+    "product_catalog": (("ddl/02_sources.sql", "Step 7:"), "pgcdc_to_fluss"),
+}
+
 
 def read_sql(rel):
     with open(os.path.join(SQL_DIR, rel)) as f:
@@ -660,14 +676,16 @@ def pipeline_sql():
 
 @app.post("/api/pipeline/bootstrap/<session>")
 def pipeline_bootstrap(session):
-    """Register what the pre-created boxes need (the postgres catalog). IF NOT EXISTS."""
+    """Register what the pre-created boxes need (the postgres catalog), and the sources a
+    running pipeline already reads. IF NOT EXISTS throughout."""
     try:
         for rel in BOOTSTRAP_FILES:
             for stmt in split_statements(read_sql(rel)):
                 execute_and_wait(session, stmt)
+        restored = restore_sources(session)
     except (GatewayError, requests.RequestException, OSError) as e:
         return json_error(e)
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "sources": restored})
 
 
 # Which table a job writes, from its plan. Matching jobs to arrows by what they write, not
@@ -689,6 +707,34 @@ def job_sinks(jid):
 def writes(sinks, table):
     full = ".".join(table)
     return any(s == full or full.endswith("." + s) for s in sinks)
+
+
+def active_jobs():
+    """Flink jobs that are up, each with the tables it writes (from its plan)."""
+    active = [j for j in flink("GET", "/jobs/overview").get("jobs", [])
+              if j["state"] in ACTIVE and j["state"] != "CANCELLING"]
+    for j in active:
+        j["sinks"] = job_sinks(j["jid"])
+    return active
+
+
+def edge_jobs(active, edge):
+    return [j for j in active if writes(j["sinks"], NODES[EDGES[edge]["to"]]["table"])]
+
+
+def restore_sources(session):
+    """Create in this session the source tables whose reading job runs (see SOURCES).
+    Returns the boxes it created. Qualified, so a USE in the session does not misplace them."""
+    running = {e for e in EDGES if any(j["state"] == "RUNNING" for j in edge_jobs(active_jobs(), e))}
+    listed = names(session, "SHOW TABLES IN `default_catalog`.`default_database`")
+    restored = []
+    for node, ((rel, prefix), edge) in SOURCES.items():
+        if edge in running and NODES[node]["table"][2] not in listed:
+            for stmt in split_statements(section(rel, prefix)):
+                execute_and_wait(session, stmt.replace(
+                    "CREATE TABLE IF NOT EXISTS ", "CREATE TABLE IF NOT EXISTS `default_catalog`.`default_database`.", 1))
+            restored.append(node)
+    return restored
 
 
 def names(session, sql):
@@ -840,16 +886,12 @@ def pipeline_status(session):
 
     # Jobs, by the table they write.
     try:
-        active = [j for j in flink("GET", "/jobs/overview").get("jobs", [])
-                  if j["state"] in ACTIVE and j["state"] != "CANCELLING"]
-        for j in active:
-            j["sinks"] = job_sinks(j["jid"])
+        active = active_jobs()
     except (GatewayError, requests.RequestException):
         active = []
     edges = {}
     for e, spec in EDGES.items():
-        jobs = [{"jid": j["jid"], "name": j["name"], "state": j["state"]}
-                for j in active if writes(j["sinks"], NODES[spec["to"]]["table"])]
+        jobs = [{"jid": j["jid"], "name": j["name"], "state": j["state"]} for j in edge_jobs(active, e)]
         states = {j["state"] for j in jobs}
         edges[e] = {"state": "running" if "RUNNING" in states else
                              "failing" if states & {"RESTARTING", "FAILING"} else
@@ -917,6 +959,7 @@ def pipeline_status(session):
                       ("live" if tjob == "RUNNING" else "ready") if files > 0 else
                       "starting" if tjob == "RUNNING" else "ready"}
     missing = [n for n, spec in NODES.items() if spec.get("precreated") and not exists[n]]
+    missing += [n for n, (_, e) in SOURCES.items() if not exists[n] and edges[e]["state"] == "running"]
     return jsonify({"nodes": nodes, "edges": edges, "tiering": tiering, "bootstrap": bool(missing)})
 
 
