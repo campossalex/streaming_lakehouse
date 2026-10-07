@@ -6,7 +6,7 @@ Fluss 0.9.1** and **Apache Iceberg 1.10**, with Lakekeeper, MinIO, Trino, Kafka
 
 This page is how to deploy it. Once it is up:
 
-- [WORKSHOP.md](WORKSHOP.md) — the attendee walkthrough, Lab 1 to the bonus track.
+- [WORKSHOP.md](WORKSHOP.md) — the attendee walkthrough, Lab 1 to Lab 5.
 - [REFERENCE.md](REFERENCE.md) — architecture, how each piece is wired and why,
   running steps from a terminal, troubleshooting.
 

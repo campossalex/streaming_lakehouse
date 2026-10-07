@@ -1,5 +1,5 @@
 -- =====================================================================
--- Enable datalake tiering  (Lab 3 Step 11, Bonus Step 23)
+-- Enable datalake tiering  (Lab 3 Step 11)
 --
 -- Not a job: an ALTER TABLE is a metadata change in Fluss. The tiering service
 -- (tiering.sh — one Flink job shared by every table) picks the table up on its next
@@ -13,7 +13,4 @@
 -- =====================================================================
 
 ALTER TABLE fluss.orders.orders_enriched
-SET ('table.datalake.enabled' = 'true', 'table.datalake.freshness' = '30s');
-
-ALTER TABLE fluss.orders.order_status
 SET ('table.datalake.enabled' = 'true', 'table.datalake.freshness' = '30s');

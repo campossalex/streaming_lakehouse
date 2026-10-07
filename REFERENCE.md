@@ -31,9 +31,6 @@ How the environment is built and why, for whoever runs or changes it. To deploy 
                            Trino ◄─────────────┘──► CloudBeaver
 ```
 
-Bonus track: `order-status-sync` upserts `orders_log` into the PK table
-`fluss.orders.order_status`, which is tiered the same way.
-
 | Component | Container(s) | Role |
 |-----------|--------------|------|
 | Fluss | `zookeeper`, `coordinator-server`, `tablet-server` | Log and PK tables; creates the Iceberg table when one is ALTERed to `table.datalake.enabled` |
@@ -60,8 +57,8 @@ docker compose exec sql-client /opt/submit.sh kafka cdc enrich
 docker compose exec jobmanager /opt/tiering.sh
 docker compose exec sql-client /opt/submit.sh lake
 
-# Lab 5 and the bonus track
-docker compose exec sql-client /opt/submit.sh revenue status
+# Lab 5
+docker compose exec sql-client /opt/submit.sh revenue
 
 # An interactive SQL client. Only 02_sources.sql is needed: see "What survives a session"
 docker compose exec sql-client /opt/flink/bin/sql-client.sh -i /opt/sql/ddl/02_sources.sql

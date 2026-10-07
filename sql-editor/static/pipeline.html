@@ -104,7 +104,6 @@
   /* A halo in the background colour, so a region border passing behind a label is masked. */
   .arch .edge-label { fill: var(--muted); font-size: 11px; font-family: var(--mono);
                       paint-order: stroke fill; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
-  .arch .gap { fill: none; stroke: var(--bg); stroke-width: 7; }   /* one arrow bridging another */
   .arch .head { fill: var(--muted); } .arch .head-ok { fill: var(--ok); } .arch .head-err { fill: var(--err); }
 
   /* Box states */
@@ -338,7 +337,7 @@
       <!-- Columns, left to right: sources · Fluss · Flink jobs · Iceberg + warehouse · consumers -->
       <rect class="region sources" x="8" y="20" width="182" height="300" rx="10"/>
       <text class="region-label sources" x="22" y="42">DATA SOURCES</text>
-      <rect class="region fluss" x="262" y="20" width="398" height="450" rx="10"/>
+      <rect class="region fluss" x="262" y="20" width="398" height="300" rx="10"/>
       <text class="region-label fluss" x="276" y="42">APACHE FLUSS · fluss.orders</text>
       <rect class="region flink" x="704" y="20" width="196" height="450" rx="10"/>
       <text class="region-label flink" x="718" y="42">APACHE FLINK · jobs</text>
@@ -363,11 +362,6 @@
         <polyline class="edge" points="440,222 462,222 462,158 482,158" marker-end="url(#head)"/>
         <text class="edge-label" x="564" y="124" text-anchor="middle">product-enrichment</text>
         <text class="edge-label" x="470" y="214">lookup join</text>
-      </g>
-      <g class="job" data-edge="order_status">
-        <polyline class="gap" points="276,200 276,244"/>
-        <polyline class="edge" points="290,98 276,98 276,396 398,396" marker-end="url(#head)"/>
-        <text class="edge-label" x="337" y="388" text-anchor="middle">order-status-sync</text>
       </g>
       <g class="job" data-edge="tiering">
         <line class="edge" x1="644" y1="152" x2="728" y2="152" marker-end="url(#head)"/>
@@ -419,12 +413,6 @@
         <image class="icon fluss-mark" href="/static/icons/fluss-outline.svg" x="296" y="210" width="20" height="24"/>
         <text class="title" x="376" y="219" text-anchor="middle">product_lookup</text>
         <text class="sub" x="376" y="235" text-anchor="middle">PK table</text>
-      </g>
-      <g class="node" data-node="order_status">
-        <rect class="box" x="400" y="374" width="150" height="44" rx="6"/>
-        <image class="icon fluss-mark" href="/static/icons/fluss-outline.svg" x="406" y="384" width="20" height="24"/>
-        <text class="title" x="486" y="393" text-anchor="middle">order_status</text>
-        <text class="sub" x="486" y="409" text-anchor="middle">PK table · bonus</text>
       </g>
       <g class="node" data-node="orders_enriched">
         <rect class="box" x="484" y="130" width="160" height="44" rx="6"/>
@@ -510,7 +498,6 @@
         <li><b>View data</b> on <b>Union read</b>: Iceberg alone next to Iceberg + Fluss. <span class="lab">Lab 4 · Step 15</span></li>
       <li>On <b>Flink · Iceberg</b>: <b>Create</b> the iceberg catalog, then <b>View data</b> to time-travel to the first snapshot, Flink reading Iceberg with no Fluss in the path. <span class="lab">Lab 4 · Step 18 bonus</span></li>
       <li><b>Deploy</b> <code>revenue-analytics-sink</code> and open Grafana. <span class="lab">Lab 5 · Steps 19–20</span></li>
-      <li>Bonus: <b>Create</b> <code>order_status</code>, <b>Deploy</b> <code>order-status-sync</code>, then <b>Enable tiering</b> on it. <span class="lab">Bonus · Steps 21–23</span></li>
       </ol>
       <div class="legend">
         <span><i class="inactive"></i>not created yet</span>
@@ -645,9 +632,6 @@ const PILLS = [
   [527, 91, 74, "Deploy", "deploy", "enrichment"],
   [736, 184, 66, "Enable", "enable", "tiering"],        [808, 184, 66, "Start", "start", "tiering"],
   [768, 432, 74, "Deploy", "deploy", "revenue"],
-  [300, 404, 74, "Deploy", "deploy", "order_status"],
-  [400, 424, 72, "Create", "create", "order_status"], [478, 424, 72, "View data", "view", "order_status"],
-  [400, 448, 150, "Enable tiering", "enable", "order_status"],
   [997, 118, 90, "View data", "view", "lake"],
   [997, 250, 90, "Open", "open", "minio"],
   [997, 432, 90, "View data", "view", "revenue_1m"],
@@ -696,7 +680,7 @@ const STATE_LABEL = { inactive: "not created", ready: "created", starting: "star
                       idle: "not deployed", running: "running", failing: "restarting" };
 const NODE_KIND = { kafka: "SOURCE", product_catalog: "SOURCE", orders_log: "FLUSS LOG", product_lookup: "FLUSS PK",
                     orders_enriched: "FLUSS LOG", revenue_1m: "POSTGRES", lake: "ICEBERG", tiering: "FLINK JOB", union: "FLINK QUERY",
-                    iceberg_flink: "FLINK + ICEBERG", order_status: "FLUSS PK" };
+                    iceberg_flink: "FLINK + ICEBERG" };
 
 function paint() {
   if (!status) return;
@@ -717,12 +701,12 @@ function paint() {
     const head = st === "running" ? "head-ok" : st === "failing" ? "head-err" : "head";
     g.querySelectorAll("[marker-end]").forEach(el => el.setAttribute("marker-end", `url(#${head})`));
   }
-  for (const n of ["kafka", "product_catalog", "orders_log", "product_lookup", "orders_enriched", "order_status"]) {
+  for (const n of ["kafka", "product_catalog", "orders_log", "product_lookup", "orders_enriched"]) {
     const exists = status.nodes[n].exists;
     setPill(pill("create", n), exists ? "✓ Created" : "Create", exists ? "off" : "primary",
             exists ? `${n} is created` : `Create ${n}`);
   }
-  for (const n of ["kafka", "product_catalog", "orders_log", "product_lookup", "orders_enriched", "revenue_1m", "order_status"])
+  for (const n of ["kafka", "product_catalog", "orders_log", "product_lookup", "orders_enriched", "revenue_1m"])
     setPill(pill("view", n), "View data", status.nodes[n].exists ? "" : "off", `View the data of ${n}`);
   setPill(pill("view", "lake"), "View data", status.nodes.lake.state === "inactive" ? "off" : "", "View orders_enriched in Iceberg");
   const ice = status.nodes.iceberg_flink.exists;
@@ -730,7 +714,7 @@ function paint() {
           ice ? "The iceberg catalog is registered" : "Create the iceberg catalog in Flink");
   setPill(pill("view", "iceberg_flink"), "View data", ice ? "" : "off", "Time travel through the iceberg catalog");
   setPill(pill("view", "union"), "View data", status.nodes.union.exists ? "" : "off", "Run the union read");
-  for (const e of ["kafka_to_fluss", "pgcdc_to_fluss", "enrichment", "revenue", "order_status"]) {
+  for (const e of ["kafka_to_fluss", "pgcdc_to_fluss", "enrichment", "revenue"]) {
     const s = status.edges[e];
     const n = s.jobs.length;
     if (s.state === "running") setPill(pill("deploy", e), n > 1 ? `● Running ×${n}` : "● Running", "running", `${e} is running`);
@@ -741,9 +725,6 @@ function paint() {
   const on = status.edges.tiering.state === "running";
   setPill(pill("enable", "tiering"), on ? "✓ Enabled" : "Enable", on ? "off" : status.edges.tiering.ready ? "primary" : "off",
           on ? "Tiering is enabled on orders_enriched" : "Enable tiering on orders_enriched");
-  const os = status.nodes.order_status, ost = os.tiered;
-  setPill(pill("enable", "order_status"), ost ? "✓ Tiering enabled" : "Enable tiering", ost || !os.exists ? "off" : "",
-          ost ? "Tiering is enabled on order_status" : "Enable tiering on order_status");
   const tj = status.tiering?.job?.state;
   setPill(pill("start", "tiering"), tj === "RUNNING" ? "● Running" : tj ? "… Starting" : "Start",
           tj ? "running" : status.tiering?.available ? "primary" : "off", "Start the tiering service");
@@ -807,14 +788,9 @@ const ABOUT = {
   enrichment: "A lookup join: each order event looks up its product in product_lookup and is written, enriched, to orders_enriched.",
   revenue: "Aggregates orders_enriched into 1-minute windows per category and upserts them into PostgreSQL revenue_1m.",
   enable: "An ALTER TABLE, not a job: it opts orders_enriched into tiering. The tiering service picks it up on its next round.",
-  order_status: "Bonus track. A Fluss primary-key table with one row per order, updated in place as the order moves from PLACED to DELIVERED. Its versioned merge engine keeps the row with the newest last_update, so an event read out of order cannot move an order back.",
-  order_status_job: "Upserts every order event from orders_log into order_status, keyed by order_id: the table always holds each order's latest status.",
-  tier_order_status: "The same ALTER TABLE as for orders_enriched, on an upsert table: the tiering service then commits order_status to Iceberg too, as merge-on-read snapshots.",
 };
-const EDGE_FROM = { kafka_to_fluss: ["kafka"], pgcdc_to_fluss: ["product_catalog"], enrichment: ["orders_log", "product_lookup"], revenue: ["orders_enriched"],
-                    order_status: ["orders_log"] };
-const EDGE_TO = { kafka_to_fluss: "orders_log", pgcdc_to_fluss: "product_lookup", enrichment: "orders_enriched", revenue: "revenue_1m",
-                  order_status: "order_status" };
+const EDGE_FROM = { kafka_to_fluss: ["kafka"], pgcdc_to_fluss: ["product_catalog"], enrichment: ["orders_log", "product_lookup"], revenue: ["orders_enriched"] };
+const EDGE_TO = { kafka_to_fluss: "orders_log", pgcdc_to_fluss: "product_lookup", enrichment: "orders_enriched", revenue: "revenue_1m" };
 
 let dlg = null;   // { action, target, defaultSql }
 const editor = CodeMirror.fromTextArea($("actSql"), {
@@ -822,11 +798,10 @@ const editor = CodeMirror.fromTextArea($("actSql"), {
   extraKeys: { "Cmd-Enter": () => primary(), "Ctrl-Enter": () => primary() },
 });
 
-// Which ABOUT text explains a button: the arrow's job, the ALTER, or the box itself.
+// Which ABOUT text explains a button: the ALTER, the iceberg catalog's creation, or the box itself.
 function aboutKey(action, target) {
-  if (action === "enable") return target === "order_status" ? "tier_order_status" : "enable";
+  if (action === "enable") return "enable";
   if (action === "create" && target === "iceberg_flink") return "iceberg_flink_create";
-  if (action === "deploy" && target === "order_status") return "order_status_job";
   return target;
 }
 
@@ -847,7 +822,7 @@ function defaultSql(action, target) {
   if (action === "view") return sql.nodes[target]?.view || "";
   if (action === "create") return sql.nodes[target]?.create || "";
   if (action === "deploy") return sql.edges[target]?.sql || "";
-  if (action === "enable") return target === "order_status" ? sql.edges.tier_order_status.sql : sql.edges.tiering.sql;
+  if (action === "enable") return sql.edges.tiering.sql;
   return "";
 }
 
@@ -857,8 +832,8 @@ function openDialog(action, target) {
   $("actResults").replaceChildren();
   editor.setValue(dlg.defaultSql);
   $("actSqlWrap").hidden = action === "start";
-  const title = action === "deploy" ? target.replace(/_/g, "-").replace("enrichment", "product-enrichment").replace("revenue", "revenue-analytics-sink").replace(/^order-status$/, "order-status-sync")
-              : action === "enable" ? `Enable tiering · ${target === "order_status" ? "order_status" : "orders_enriched"}`
+  const title = action === "deploy" ? target.replace(/_/g, "-").replace("enrichment", "product-enrichment").replace("revenue", "revenue-analytics-sink")
+              : action === "enable" ? "Enable tiering · orders_enriched"
               : action === "start" ? "Tiering service"
               : target === "lake" ? "orders_enriched in Iceberg"
               : target === "union" ? "Union read · orders_enriched"
@@ -880,9 +855,7 @@ function refreshDialog() {
   if (!dlg || !status) return;
   const { action, target } = dlg, notes = [], buttons = [];
   const node = status.nodes[target], edge = status.edges[target];
-  let st = action === "deploy" ? edge?.state
-         : action === "enable" ? (target === "order_status" ? (status.nodes.order_status.tiered ? "running" : "idle") : status.edges.tiering.state)
-         : node?.state;
+  let st = action === "deploy" ? edge?.state : action === "enable" ? status.edges.tiering.state : node?.state;
   $("actState").textContent = STATE_LABEL[st] || ""; $("actState").className = "chip " + (st === "running" ? "live" : st || "");
   const jobLink = j => `<a target="_blank" href="${location.protocol}//${host}:8081/#/job/running/${j.jid}/overview">${esc(j.name)} · ${j.jid.slice(0, 8)}</a>`;
   if (action === "view") {
@@ -912,13 +885,6 @@ function refreshDialog() {
         notes.push(["It reads the topic from the earliest offset: if this job ran before, those events land in orders_log again.", ""]);
       buttons.push(btn("▶ Deploy job", "primary", () => runSql(editor.getValue()), missing.length > 0));
     }
-  } else if (action === "enable" && target === "order_status") {
-    const os = status.nodes.order_status;
-    if (os.tiered) notes.push(["Tiering is enabled on order_status.", "ok"]);
-    if (!os.exists) notes.push(["Create order_status first.", "err"]);
-    else if (status.edges.order_status.state !== "running") notes.push(["Deploy order-status-sync first: tiering copies what the job writes.", ""]);
-    if (!status.tiering?.job) notes.push(["The tiering service is not running yet: start it on the Tiering service box, or nothing is committed.", ""]);
-    buttons.push(btn(os.tiered ? "✓ Enabled" : "Enable tiering", "primary", () => runSql(editor.getValue()), os.tiered || !os.exists));
   } else if (action === "enable") {
     const on = status.edges.tiering.state === "running";
     if (on) notes.push(["Tiering is enabled on orders_enriched.", "ok"]);
@@ -1339,22 +1305,6 @@ const GUIDE = [
   { a: "open", t: "grafana", li: 6, lab: "Lab 5 · Step 20", title: "Open the Grafana dashboard",
     what: "The Order Analytics dashboard, reading revenue_1m.",
     look: "A new point every minute. Hover a panel title's ⓘ for what it measures." },
-  { a: "create", t: "order_status", li: 7, lab: "Bonus · Step 21", title: "Create the PK table order_status",
-    what: "One row per order, updated in place. Its <b>versioned merge engine</b> keeps the row with the newest last_update, so an event read out of order cannot move an order back.",
-    look: "The box turns solid.",
-    done: s => s.nodes.order_status.exists },
-  { a: "deploy", t: "order_status", li: 7, lab: "Bonus · Step 22", title: "Deploy order-status-sync",
-    what: "Upserts every event from orders_log into order_status, keyed by order_id: the table always holds each order's latest status.",
-    look: "order_status goes amber, then green.",
-    done: s => s.edges.order_status.state === "running",
-    until: s => s.nodes.order_status.state === "live", wait: "order_status turns green once its first rows are confirmed." },
-  { a: "view", t: "order_status", li: 7, lab: "Bonus", title: "Count the orders by status",
-    what: "A streaming GROUP BY over a primary-key table: a changelog, so the counts move as orders change status.",
-    look: "Few orders PLACED or PAID, most DELIVERED: the counts shift every few seconds." },
-  { a: "enable", t: "order_status", li: 7, lab: "Bonus · Step 23", title: "Tier the PK table as well",
-    what: "The same <b>ALTER TABLE</b> as Lab 3, on an upsert table: the tiering service then commits order_status to Iceberg too.",
-    look: "The button turns to ✓; Trino can query lakehouse.orders.order_status after the next commit.",
-    done: s => !!s.nodes.order_status.tiered },
 ];
 // What each kind of button does, for the hover explanations.
 const ACTION_TIP = {
@@ -1378,7 +1328,7 @@ const NODE_TIP = {
 const NODE_NAME = { kafka: "Kafka · orders_log topic", product_catalog: "PostgreSQL · product_catalog", orders_log: "fluss.orders.orders_log",
   product_lookup: "fluss.orders.product_lookup", orders_enriched: "fluss.orders.orders_enriched", revenue_1m: "PostgreSQL · revenue_1m",
   union: "Union read", iceberg_flink: "Flink · Iceberg", kafka_to_fluss: "kafka-to-fluss", pgcdc_to_fluss: "pgcdc-to-fluss",
-  enrichment: "product-enrichment", revenue: "revenue-analytics-sink", order_status: "fluss.orders.order_status" };
+  enrichment: "product-enrichment", revenue: "revenue-analytics-sink" };
 
 const seenKey = () => `pipeline.guide.seen.${(session || "").slice(0, 8)}`;
 function seenSet() { try { return new Set(JSON.parse(store.get(seenKey()) || "[]")); } catch { return new Set(); } }
@@ -1525,8 +1475,7 @@ function tipFor(el) {
   }
   if (job) {
     const e = job.dataset.edge;
-    const [title, text] = e === "tiering" ? NODE_TIP.tiering_edge : e === "order_status" ? ["order-status-sync", ABOUT.order_status_job]
-                        : NODE_TIP[e] || [NODE_NAME[e] || e, ABOUT[e] || ""];
+    const [title, text] = e === "tiering" ? NODE_TIP.tiering_edge : NODE_TIP[e] || [NODE_NAME[e] || e, ABOUT[e] || ""];
     return [title, text];
   }
   return null;

@@ -58,11 +58,3 @@ SELECT file_path, record_count, file_size_in_bytes
 FROM lakehouse.orders."orders_enriched$files"
 ORDER BY file_size_in_bytes DESC
 LIMIT 20;
-
--- Bonus Step 24: the upsert table, tiered. Upserts become Iceberg row-level deletes
--- plus inserts, so this shows one row per order, like Fluss does.
-SELECT * FROM lakehouse.orders.order_status LIMIT 20;
-
-SELECT status, COUNT(*) AS orders
-FROM lakehouse.orders.order_status
-GROUP BY status;

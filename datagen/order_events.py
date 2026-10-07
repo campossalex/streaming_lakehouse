@@ -146,7 +146,7 @@ def main() -> None:
         # order needs ~3 advances to finish, so ~1 order completes every 3 ticks: placing
         # with a higher chance than that (0.5) holds the pool near num_orders. With 200
         # in flight an order lives ~1 minute (median; p90 ~2 minutes), long enough for
-        # PLACED/PAID/SHIPPED to be visible in order_status and Grafana. (At 0.2 the pool
+        # PLACED/PAID/SHIPPED to be visible in Grafana. (At 0.2 the pool
         # drained to a handful of orders that finished within seconds.)
         if len(active) < num_orders and random.random() < 0.5:
             oid      = new_order_id()

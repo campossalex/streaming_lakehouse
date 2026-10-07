@@ -167,12 +167,6 @@ MENU = [
         ("Step 19 · the postgres catalog", ("file", "ddl/03_postgres.sql")),
         ("Step 19 · job: revenue-analytics-sink", ("job", "50_revenue.sql")),
     ]),
-    ("Bonus track · order_status", [
-        ("Step 21 · order_status (PK table)", ("ddl", "01_fluss.sql", "Bonus Step 21:")),
-        ("Step 22 · job: order-status-sync", ("job", "40_order_status.sql")),
-        ("Step 23 · tier the PK table as well", ("explore", "Bonus, Step 23:")),
-        ("Bonus · the current state of every order", ("explore", "Bonus: the current state")),
-    ]),
 ]
 
 
@@ -596,14 +590,12 @@ NODES = {
     "orders_enriched": {"table": ("fluss", "orders", "orders_enriched"), "feed": "enrichment"},
     "revenue_1m":      {"table": ("postgres", "dwh", "revenue_1m"), "listed": "public.revenue_1m",
                         "feed": "revenue", "precreated": True},
-    "order_status":    {"table": ("fluss", "orders", "order_status"), "feed": "order_status"},   # bonus track
 }
 EDGES = {
     "kafka_to_fluss": {"from": ["kafka"], "to": "orders_log", "file": "jobs/10_kafka_to_fluss.sql"},
     "pgcdc_to_fluss": {"from": ["product_catalog"], "to": "product_lookup", "file": "jobs/20_pgcdc_to_fluss.sql"},
     "enrichment":     {"from": ["orders_log", "product_lookup"], "to": "orders_enriched", "file": "jobs/30_enrichment.sql"},
     "revenue":        {"from": ["orders_enriched"], "to": "revenue_1m", "file": "jobs/50_revenue.sql"},
-    "order_status":   {"from": ["orders_log"], "to": "order_status", "file": "jobs/40_order_status.sql"},
 }
 # Pre-created on page load: revenue_1m already exists in the warehouse (postgres-dwh), so Flink only needs
 # the postgres catalog. The two sources are not: attendees create them from their boxes.
@@ -651,8 +643,6 @@ def pipeline_sql():
     snapshots = next(b for t, b in explore if t.startswith("Lab 4, Step 18:"))
     iceberg_catalog = next(b for t, b in explore if t.startswith("Bonus: Iceberg's own catalog"))
     time_travel = next(b for t, b in explore if t.startswith("Bonus: time travel"))
-    status_view = next(b for t, b in explore if t.startswith("Bonus: the current state"))
-    status_tier = next(b for t, b in explore if t.startswith("Bonus, Step 23:"))
     enable = split_statements(read_sql("lake/enable_tiering.sql"))[0]
     return jsonify({
         "nodes": {
@@ -674,13 +664,10 @@ def pipeline_sql():
             "iceberg_flink": {"create": "-- Lab 4, Step 18 bonus: Lakekeeper as a Flink catalog of its own.\n" + iceberg_catalog,
                               "view": "-- Lab 4, Step 18 bonus: time travel, read by Flink straight from Iceberg.\n" + time_travel},
             "union": {"view": "-- The union read: Iceberg's history plus Fluss's fresh rows, next to Iceberg alone.\n" + union_view},
-            "order_status": {"create": catalog + "\n" + database + "\n" + section("ddl/01_fluss.sql", "Bonus Step 21:"),
-                             "view": "-- Bonus: the current state of every order, counted by status.\n" + status_view},
         },
         "edges": {
             **{e: {"sql": without_header(read_sql(spec["file"])) + RESET_NAME.lstrip("\n")} for e, spec in EDGES.items()},
             "tiering": {"sql": "-- Opt orders_enriched in: the tiering service starts committing it to Iceberg.\n" + enable + ";\n"},
-            "tier_order_status": {"sql": "-- Bonus Step 23: tier the PK table as well.\n" + status_tier},
         },
     })
 
@@ -878,7 +865,6 @@ def parquet_count(location):
 
 
 tiering_on = False   # once true it stays true: tiering cannot be switched off again
-status_tiered = False   # the same, for the bonus order_status table
 
 
 def datalake_enabled(session, table):
@@ -892,7 +878,7 @@ def datalake_enabled(session, table):
 
 @app.get("/api/pipeline/status/<session>")
 def pipeline_status(session):
-    global tiering_on, status_tiered
+    global tiering_on
     try:
         catalogs = names(session, "SHOW CATALOGS")
         listed = {
@@ -944,11 +930,6 @@ def pipeline_status(session):
         tiering_on = datalake_enabled(session, NODES["orders_enriched"]["table"])
     if not exists["orders_enriched"]:
         tiering_on = False
-    if exists["order_status"] and not status_tiered:
-        status_tiered = datalake_enabled(session, NODES["order_status"]["table"])
-    if not exists["order_status"]:
-        status_tiered = False
-    nodes["order_status"]["tiered"] = status_tiered
     snapshot, files, first_snapshot = None, None, None
     try:
         meta = lake_table() if tiering_on else None

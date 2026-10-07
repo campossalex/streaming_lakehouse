@@ -110,18 +110,3 @@ SET 'execution.runtime-mode' = 'batch';
 SELECT COUNT(*) AS events_at_that_point
 FROM iceberg.orders.orders_enriched /*+ OPTIONS('snapshot-id' = '1234567890123456789') */;
 SET 'execution.runtime-mode' = 'streaming';
-
-
--- --------------------------------- Bonus, Step 23: tier the PK table as well
--- The same ALTER, on an upsert table. Needs the order-status-sync job running.
-ALTER TABLE fluss.orders.order_status
-SET ('table.datalake.enabled' = 'true', 'table.datalake.freshness' = '30s');
-
-
--- ------------------------------------ Bonus: the current state of every order
--- One row per order. On a PK table a streaming read is a changelog: rows are updated
--- in place as the orders move on. Once the table is tiered, expect up to a minute before
--- the first rows.
-SELECT status, COUNT(*) AS orders
-FROM fluss.orders.order_status
-GROUP BY status;

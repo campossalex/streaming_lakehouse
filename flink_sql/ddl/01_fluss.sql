@@ -1,6 +1,5 @@
 -- =====================================================================
--- The Fluss catalog and every Fluss table  (Lab 1 Steps 1-2, Lab 2 Steps 6 and 9,
--- Bonus Step 21)
+-- The Fluss catalog and every Fluss table  (Lab 1 Steps 1-2, Lab 2 Steps 6 and 9)
 --
 -- Unlike ddl/02_sources.sql, nothing here is lost when a session ends:
 --
@@ -16,7 +15,7 @@
 --
 -- Fluss is started with datalake.format = iceberg (docker-compose.yml), which is copied
 -- into each table's properties here, at CREATE TABLE time. That is what later lets
--- Lab 3 tier orders_enriched and order_status with a single ALTER TABLE.
+-- Lab 3 tier orders_enriched with a single ALTER TABLE.
 -- =====================================================================
 
 
@@ -82,25 +81,4 @@ CREATE TABLE IF NOT EXISTS fluss.orders.orders_enriched (
   WATERMARK FOR `event_time` AS `event_time` - INTERVAL '5' SECOND
 ) WITH (
   'bucket.num' = '3'
-);
-
-
--- ----------------------------------- Bonus Step 21: order_status (PK table)
--- One row per order, upserted in place as it moves PLACED -> DELIVERED.
---
--- The versioned merge engine keeps, per key, the row with the highest last_update and
--- ignores writes with an older one. With the default (last write wins), an event read
--- out of order — e.g. while the job replays the log from the start — could move an
--- order back from DELIVERED to SHIPPED.
-CREATE TABLE IF NOT EXISTS fluss.orders.order_status (
-  `order_id`    STRING,
-  `customer_id` STRING,
-  `status`      STRING,
-  `amount`      DECIMAL(10, 2),
-  `last_update` TIMESTAMP(3),
-  PRIMARY KEY (`order_id`) NOT ENFORCED
-) WITH (
-  'bucket.num'                              = '3',
-  'table.merge-engine'                      = 'versioned',
-  'table.merge-engine.versioned.ver-column' = 'last_update'
 );

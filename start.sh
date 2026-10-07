@@ -82,10 +82,9 @@ print_manual_steps() {
 
        docker compose exec trino trino --catalog lakehouse --schema orders
 
-  5. Lab 5 and the bonus track:
+  5. Lab 5:
 
        docker compose exec sql-client /opt/submit.sh revenue   # -> Grafana
-       docker compose exec sql-client /opt/submit.sh status    # PK table, tiered by 'lake'
 
   ── Useful commands ──────────────────────────────────────────────────────────
 

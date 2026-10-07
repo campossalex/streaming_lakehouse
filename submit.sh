@@ -10,7 +10,6 @@
 #   cdc      jobs/20_pgcdc_to_fluss.sql   Lab 2   Postgres CDC     -> fluss.orders.product_lookup
 #   enrich   jobs/30_enrichment.sql       Lab 2   lookup join      -> fluss.orders.orders_enriched
 #   lake     lake/enable_tiering.sql      Lab 3   ALTER TABLE ... 'table.datalake.enabled' (not a job)
-#   status   jobs/40_order_status.sql     Bonus   orders_log       -> fluss.orders.order_status
 #   revenue  jobs/50_revenue.sql          Lab 5   TUMBLE 1 min     -> Postgres revenue_1m
 #
 # The tiering service is not in this list: it is a JAR, not SQL. See tiering.sh.
@@ -27,7 +26,7 @@ set -euo pipefail
 readonly SQL_DIR=/opt/sql
 
 JOBS=("$@")
-[ ${#JOBS[@]} -eq 0 ] && JOBS=(kafka cdc enrich lake status revenue)
+[ ${#JOBS[@]} -eq 0 ] && JOBS=(kafka cdc enrich lake revenue)
 
 WORK="$(mktemp -d /tmp/pipeline.XXXXXX)"
 trap 'rm -rf "$WORK"' EXIT
@@ -47,7 +46,6 @@ job_file() {
     cdc)     echo "$SQL_DIR/jobs/20_pgcdc_to_fluss.sql" ;;
     enrich)  echo "$SQL_DIR/jobs/30_enrichment.sql" ;;
     lake)    echo "$SQL_DIR/lake/enable_tiering.sql" ;;
-    status)  echo "$SQL_DIR/jobs/40_order_status.sql" ;;
     revenue) echo "$SQL_DIR/jobs/50_revenue.sql" ;;
     *)       return 1 ;;
   esac
@@ -58,7 +56,7 @@ FAILED=""
 submit_one() {
   local name="$1" file out
   if ! file="$(job_file "$name")"; then
-    echo "unknown job '$name' (expected: kafka, cdc, enrich, lake, status, revenue)" >&2
+    echo "unknown job '$name' (expected: kafka, cdc, enrich, lake, revenue)" >&2
     FAILED="$FAILED $name"
     return
   fi
