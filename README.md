@@ -1,6 +1,6 @@
-# Streaming Lakehouse — Open-Source Edition
+# StreamHouse
 
-The streaming lakehouse workshop on open source only — **Apache Flink 1.20**, **Apache
+The StreamHouse workshop on open source only — **Apache Flink 1.20**, **Apache
 Fluss 0.9.1** and **Apache Iceberg 1.10**, with Lakekeeper, MinIO, Trino, Kafka
 (Redpanda), PostgreSQL and Grafana — all in one Docker Compose stack.
 

@@ -1,6 +1,6 @@
 name: streaming-lakehouse-oss
 
-# Streaming lakehouse on open source: Apache Flink + Apache Fluss + Apache Iceberg, all in
+# StreamHouse on open source: Apache Flink + Apache Fluss + Apache Iceberg, all in
 # Docker Compose. The open-source edition of the Ververica Platform streaming lakehouse
 # workshop: the same labs, without the platform.
 #
