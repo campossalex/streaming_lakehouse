@@ -1,7 +1,7 @@
 # One-off build tool — NOT part of the live lab pipeline.
 #
 # Regenerates products.csv: 500 synthetic-but-realistic products loaded into
-# PostgreSQL's product_catalog table (see ../../pg_shop_ddl.sql),
+# PostgreSQL's product_catalog table (see ../../postgres/pg_shop_ddl.sql),
 # which is then replicated into fluss.orders.product_lookup via postgres-cdc (Lab 2).
 #
 # Usage: python3 generate_products.py > products.csv

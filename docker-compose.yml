@@ -12,7 +12,7 @@ name: streaming-lakehouse-oss
 #                       Iceberg on MinIO, catalogued by Lakekeeper ─► Trino / CloudBeaver
 #
 # Prerequisites:
-#   ./download-jars.sh once, to populate ./lib/
+#   ./scripts/download-jars.sh once, to populate ./lib/
 #   ./start.sh         (docker compose up -d, then submits the pipeline; see --services-only)
 #
 # Ports exposed to the host:
@@ -469,8 +469,8 @@ services:
 
   # ── PostgreSQL ×2: the shop's source database and the data warehouse ─────────
   # Two servers on purpose, so they feel like the two different systems they stand for.
-  # `postgres` (database `shop`): product_catalog, the CDC source — pg_shop_ddl.sql.
-  # `postgres-dwh` (database `dwh`): revenue_1m, written by Lab 5 — pg_dwh_ddl.sql.
+  # `postgres` (database `shop`): product_catalog, the CDC source — postgres/pg_shop_ddl.sql.
+  # `postgres-dwh` (database `dwh`): revenue_1m, written by Lab 5 — postgres/pg_dwh_ddl.sql.
 
   postgres:
     image: postgres:15
@@ -497,7 +497,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./datagen/data/products.csv:/products.csv:ro
-      - ./pg_shop_ddl.sql:/docker-entrypoint-initdb.d/01_shop.sql:ro
+      - ./postgres/pg_shop_ddl.sql:/docker-entrypoint-initdb.d/01_shop.sql:ro
     networks:
       - lakehouse-net
     healthcheck:
@@ -520,7 +520,7 @@ services:
       - "5433:5432"
     volumes:
       - postgres-dwh-data:/var/lib/postgresql/data
-      - ./pg_dwh_ddl.sql:/docker-entrypoint-initdb.d/01_dwh.sql:ro
+      - ./postgres/pg_dwh_ddl.sql:/docker-entrypoint-initdb.d/01_dwh.sql:ro
     networks:
       - lakehouse-net
     healthcheck:
@@ -530,7 +530,7 @@ services:
       retries: 20
 
   # ── Flink session cluster ────────────────────────────────────────────────────
-  # lib/ is mounted from the host — run ./download-jars.sh first. The entrypoints copy
+  # lib/ is mounted from the host — run ./scripts/download-jars.sh first. The entrypoints copy
   # the JARs into /opt/flink/lib/ because the mount is read-only.
   #
   # The shell runs as root; docker-entrypoint.sh then drops the JVM to the `flink` user.
@@ -569,8 +569,8 @@ services:
       - "8081:8081"
     volumes:
       - ./lib:/opt/flink/lib/extra:ro
-      - ./tiering.sh:/opt/tiering.sh:ro
-      - ./tiering.args:/opt/tiering.args:ro
+      - ./scripts/tiering.sh:/opt/tiering.sh:ro
+      - ./scripts/tiering.args:/opt/tiering.args:ro
       # Checkpoint state is written by the TaskManager and its metadata by the JobManager,
       # so file:// checkpointing only works if both see one filesystem.
       - flink-checkpoints:/tmp/flink-checkpoints
@@ -661,7 +661,7 @@ services:
     volumes:
       - ./lib:/opt/flink/lib/extra:ro
       - ./flink_sql:/opt/sql:ro
-      - ./submit.sh:/opt/submit.sh:ro
+      - ./scripts/submit.sh:/opt/submit.sh:ro
       # CatalogStore. It persists CATALOG REGISTRATIONS — the `CREATE CATALOG fluss`
       # configuration — not tables. That is enough here: every Fluss table lives in Fluss
       # itself, so once `fluss` is registered, fluss.orders.* is visible from any session.
@@ -744,7 +744,7 @@ services:
       - ./sql-editor:/app:ro
       - ./flink_sql:/opt/sql:ro
       - ./lib/tiering:/opt/tiering:ro
-      - ./tiering.args:/opt/tiering.args:ro
+      - ./scripts/tiering.args:/opt/tiering.args:ro
     working_dir: /app
     command: >
       bash -c "pip install -r requirements.txt -q && python3 app.py"

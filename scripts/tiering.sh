@@ -22,7 +22,7 @@
 set -euo pipefail
 
 JAR="$(ls /opt/flink/lib/extra/tiering/fluss-flink-tiering-*.jar 2>/dev/null | head -1)"
-[ -n "$JAR" ] || { echo "ERROR: no fluss-flink-tiering JAR in lib/tiering/ — run ./download-jars.sh" >&2; exit 1; }
+[ -n "$JAR" ] || { echo "ERROR: no fluss-flink-tiering JAR in lib/tiering/ — run ./scripts/download-jars.sh" >&2; exit 1; }
 
 # Refuse to start a second copy: two tiering jobs would compete for the same tables.
 if curl -sf http://localhost:8081/jobs/overview \

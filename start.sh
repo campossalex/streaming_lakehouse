@@ -109,7 +109,7 @@ STEPS
 
 if [ ! -f lib/tiering/fluss-flink-tiering-0.9.1-incubating.jar ] || [ -z "$(ls -A lib/*.jar 2>/dev/null)" ]; then
   echo "==> Downloading connector JARs..."
-  bash download-jars.sh
+  bash scripts/download-jars.sh
 else
   echo "==> [skip] lib/ already populated ($(ls lib/*.jar 2>/dev/null | wc -l | tr -d ' ') JARs + tiering)"
 fi

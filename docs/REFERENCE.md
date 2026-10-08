@@ -1,7 +1,7 @@
 # Streaming Lakehouse (open-source edition): reference
 
 How the environment is built and why, for whoever runs or changes it. To deploy it, see
-[README.md](README.md); for the attendee walkthrough, [WORKSHOP.md](WORKSHOP.md).
+[README.md](../README.md); for the attendee walkthrough, [WORKSHOP.md](../WORKSHOP.md).
 
 ---
 
@@ -78,15 +78,15 @@ the tiering service.
 |------|---------|
 | `flink_sql/ddl/01_fluss.sql` | The `fluss` catalog, the `orders` database and all four Fluss tables |
 | `flink_sql/ddl/02_sources.sql` | Kafka source and postgres-cdc source |
-| `flink_sql/ddl/03_postgres.sql` | The `postgres` JDBC catalog; Lab 5 writes `postgres.dwh.revenue_1m` through it (column meanings: `pg_dwh_ddl.sql`) |
+| `flink_sql/ddl/03_postgres.sql` | The `postgres` JDBC catalog; Lab 5 writes `postgres.dwh.revenue_1m` through it (column meanings: `postgres/pg_dwh_ddl.sql`) |
 | `flink_sql/jobs/10…50_*.sql` | One long-running `INSERT INTO` each, in lab order |
 | `flink_sql/lake/enable_tiering.sql` | The two `ALTER TABLE ... 'table.datalake.enabled'` statements |
 | `flink_sql/explore.sql` | The labs' SELECTs and ALTERs; one editor example per `-- ---- title` section |
 | `trino_sql/lakehouse.sql` | The Trino queries for CloudBeaver: Steps 13, 16–18, 24 |
 | `sql-editor/` | Flask proxy (`app.py`) in front of the SQL Gateway, and the one-page UI |
-| `tiering.sh`, `submit.sh` | Mounted into `jobmanager` and `sql-client` respectively |
-| `tiering.args` | The tiering service's program arguments — the one copy, used by `tiering.sh` and the editor's Start button |
-| `pg_shop_ddl.sql`, `pg_dwh_ddl.sql` | The two PostgreSQL servers' setup, run once each via `docker-entrypoint-initdb.d`: `shop` seeds `product_catalog` (500 rows), its users (`shop_user`, `cdc_user`) and the CDC slot and publication; `dwh` creates `revenue_1m` and `dwh_user` |
+| `scripts/tiering.sh`, `scripts/submit.sh` | Mounted into `jobmanager` and `sql-client` respectively |
+| `scripts/tiering.args` | The tiering service's program arguments — the one copy, used by `tiering.sh` and the editor's Start button |
+| `postgres/pg_shop_ddl.sql`, `postgres/pg_dwh_ddl.sql` | The two PostgreSQL servers' setup, run once each via `docker-entrypoint-initdb.d`: `shop` seeds `product_catalog` (500 rows), its users (`shop_user`, `cdc_user`) and the CDC slot and publication; `dwh` creates `revenue_1m` and `dwh_user` |
 
 ---
 
@@ -226,7 +226,7 @@ classpath, and the usual way to get it on Flink is the uber JAR. But it bundles 
 which shadows the Avro 1.12 Iceberg is built against, and the tiering job restart-loops
 on its first write with `NoSuchMethodError: ... LogicalTypes.timestampNanos()`. Trino's
 `hadoop-apache` relocates all of Hadoop's dependencies, Avro included.
-`download-jars.sh` deletes an uber JAR it finds left over in `lib/`.
+`scripts/download-jars.sh` deletes an uber JAR it finds left over in `lib/`.
 
 ---
 
@@ -253,7 +253,7 @@ the table.
 
 **`NoSuchMethodError: ... org.apache.avro.LogicalTypes.timestampNanos()`.** An old Avro
 is on the Flink classpath — almost always `flink-shaded-hadoop-2-uber` in `lib/`. Re-run
-`./download-jars.sh` (it removes it), then
+`./scripts/download-jars.sh` (it removes it), then
 `docker compose up -d --force-recreate jobmanager taskmanager sql-client sql-gateway`
 and resubmit: the recreated JobManager has no jobs.
 
@@ -286,7 +286,7 @@ docker compose down -v   # remove containers and every volume — the normal way
 A plain `docker compose down` (no `-v`) is not a useful middle ground: PostgreSQL, MinIO
 and the Lakekeeper catalog are on named volumes and survive, but ZooKeeper and the tablet
 server keep Fluss's metadata and data inside their containers, so the Fluss tables are
-gone while their Iceberg copies remain. Use `./start.sh --reset` to start clean (see [README.md](README.md#run-locally)).
+gone while their Iceberg copies remain. Use `./start.sh --reset` to start clean (see [README.md](../README.md#run-locally)).
 
 Whatever survives, the jobs do not: the session cluster has no HA. And resubmitting
 `kafka-to-fluss` on top of existing Fluss data duplicates it, because the Kafka table

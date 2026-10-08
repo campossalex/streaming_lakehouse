@@ -7,7 +7,7 @@ Fluss 0.9.1** and **Apache Iceberg 1.10**, with Lakekeeper, MinIO, Trino, Kafka
 This page is how to deploy it. Once it is up:
 
 - [WORKSHOP.md](WORKSHOP.md) — the attendee walkthrough, Lab 1 to Lab 5.
-- [REFERENCE.md](REFERENCE.md) — architecture, how each piece is wired and why,
+- [docs/REFERENCE.md](docs/REFERENCE.md) — architecture, how each piece is wired and why,
   running steps from a terminal, troubleshooting.
 
 ---
@@ -56,7 +56,7 @@ docker compose down -v      # stop everything and delete its data
 ```
 
 `./start.sh --reset` is the only clean restart — see
-[REFERENCE.md → Teardown](REFERENCE.md#teardown) for why a plain `down`/`up` is not.
+[docs/REFERENCE.md → Teardown](docs/REFERENCE.md#teardown) for why a plain `down`/`up` is not.
 
 ---
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# download-jars.sh — fetch connector JARs into ./lib/ for Flink and Fluss.
+# scripts/download-jars.sh — fetch connector JARs into ./lib/ for Flink and Fluss.
 #
 # Layout, and who loads what:
 #
@@ -27,7 +27,7 @@ CDC_CONNECTOR_VERSION="3.2.1"
 JDBC_CONNECTOR_VERSION="3.3.0-1.20"   # core + postgres modules, see below
 POSTGRES_DRIVER_VERSION="42.7.4"
 
-LIB_DIR="$(dirname "$0")/lib"
+LIB_DIR="$(dirname "$0")/../lib"
 mkdir -p "$LIB_DIR/tiering"
 
 download() {
