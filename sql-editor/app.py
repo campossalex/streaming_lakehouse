@@ -258,8 +258,24 @@ def result_path(session, op, token=0):
     return f"/v2/sessions/{session}/operations/{op}/result/{token}?rowFormat=JSON"
 
 
+# A query's rows reach the client through Flink's collect sink. With exactly-once
+# checkpointing (the session's 30 s interval) it holds them until a checkpoint completes,
+# so a streaming SELECT shows nothing for up to 30 s, then a batch every 30 s.
+# At-least-once lets them through as they come; at worst a failover repeats some rows.
+# Queries only, per statement: INSERT jobs keep exactly-once.
+QUERY = re.compile(r"\s*(\(\s*)*(SELECT|WITH|VALUES|TABLE)\b", re.I)
+QUERY_CONFIG = {"execution.checkpointing.mode": "AT_LEAST_ONCE"}
+
+
+def submit(session, sql):
+    body = {"statement": sql}
+    if QUERY.match(sql):
+        body["executionConfig"] = QUERY_CONFIG
+    return gw("POST", f"/v1/sessions/{session}/statements", body)["operationHandle"]
+
+
 def execute_and_wait(session, sql, timeout=60):
-    op = gw("POST", f"/v1/sessions/{session}/statements", {"statement": sql})["operationHandle"]
+    op = submit(session, sql)
     path, deadline = result_path(session, op), time.time() + timeout
     while path:
         res = gw("GET", path)
@@ -430,11 +446,10 @@ def split():
 @app.post("/api/run/<session>")
 def run(session):
     try:
-        res = gw("POST", f"/v1/sessions/{session}/statements",
-                 {"statement": request.get_json()["sql"]})
+        op = submit(session, request.get_json()["sql"])
     except (GatewayError, requests.RequestException) as e:
         return json_error(e, 400)
-    return jsonify({"op": res["operationHandle"]})
+    return jsonify({"op": op})
 
 
 @app.get("/api/result/<session>/<op>/<int:token>")
@@ -491,7 +506,7 @@ def close(session):
 
 def query_rows(session, sql, timeout=60):
     """Run one statement and return every row's fields. For bounded statements only."""
-    op = gw("POST", f"/v1/sessions/{session}/statements", {"statement": sql})["operationHandle"]
+    op = submit(session, sql)
     path, rows, columns, deadline = result_path(session, op), [], [], time.time() + timeout
     try:
         while path:
@@ -761,7 +776,7 @@ def want_probe(node):
 
 
 def first_row(session, sql):
-    op = gw("POST", f"/v1/sessions/{session}/statements", {"statement": sql})["operationHandle"]
+    op = submit(session, sql)
     path, deadline = result_path(session, op), time.time() + PROBE_TIMEOUT
     try:
         while path and time.time() < deadline:

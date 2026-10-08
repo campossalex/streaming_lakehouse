@@ -13,11 +13,4 @@
 SET 'pipeline.name' = 'kafka-to-fluss';
 
 INSERT INTO fluss.orders.orders_log
-SELECT
-  `order_id`,
-  `customer_id`,
-  `product_id`,
-  `status`,
-  `amount`,
-  `event_time`
-FROM orders_log_kafka;
+SELECT * FROM orders_log_kafka;

@@ -124,6 +124,13 @@ Details worth knowing:
 - **Waiting indicator.** A running statement's panel shows a spinner and the elapsed
   time until its first row arrives, with a hint after 10 s about slow starts on tiered
   tables.
+- **Queries run at-least-once.** A query's rows reach the client through Flink's collect
+  sink, which under exactly-once checkpointing (every session has a 30 s interval) holds
+  them until a checkpoint completes: first rows after up to 30 s, then a batch every
+  30 s. The editor sends each `SELECT`, `WITH`, `VALUES` and `TABLE` statement with
+  `execution.checkpointing.mode = AT_LEAST_ONCE` (the gateway's per-statement
+  `executionConfig`), so rows stream as they come, typically within 1–2 s. At worst a
+  failover repeats some rows. `INSERT` jobs keep the session's exactly-once mode.
 - **No placeholder substitution and no redaction.** The workshop has no secrets, so the
   SQL files use literal hostnames and statements reach the gateway verbatim.
 - **Optimizer hints are kept.** The statement splitter drops `/* ... */` comments but
@@ -269,6 +276,11 @@ the duplicate in the Flink Web UI.
 **Ad hoc queries stay in `CREATED` / never return rows.** The TaskManager has 12 slots
 and each running job holds one. Six pipeline jobs plus several forgotten streaming
 SELECTs fill it up: cancel what you are not using, from the editor or the Flink Web UI.
+
+**A streaming `SELECT` shows rows only every 30 s.** It ran exactly-once: rows are
+released on checkpoints (see "Queries run at-least-once" above). The editor avoids this;
+in the `sql-client` container, run `SET 'execution.checkpointing.mode' = 'AT_LEAST_ONCE';`
+first — and `RESET` it before submitting an `INSERT`.
 
 **Grafana panels are empty.** A window is written only once it closes. On a table with
 history, every past window is written as soon as `revenue-analytics-sink` has
