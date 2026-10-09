@@ -76,15 +76,16 @@ the tiering service.
 
 | File | Purpose |
 |------|---------|
-| `flink_sql/ddl/01_fluss.sql` | The `fluss` catalog, the `orders` database and all four Fluss tables |
+| `flink_sql/ddl/01_fluss.sql` | The `fluss` catalog, the `orders` database and the three Fluss tables |
 | `flink_sql/ddl/02_sources.sql` | Kafka source and postgres-cdc source |
 | `flink_sql/ddl/03_postgres.sql` | The `postgres` JDBC catalog; Lab 5 writes `postgres.dwh.revenue_1m` through it (column meanings: `postgres/pg_dwh_ddl.sql`) |
 | `flink_sql/jobs/10…50_*.sql` | One long-running `INSERT INTO` each, in lab order |
-| `flink_sql/lake/enable_tiering.sql` | The two `ALTER TABLE ... 'table.datalake.enabled'` statements |
+| `flink_sql/lake/enable_tiering.sql` | The `ALTER TABLE ... 'table.datalake.enabled'` that opts `orders_enriched` in to tiering |
 | `flink_sql/explore.sql` | The labs' SELECTs and ALTERs; one editor example per `-- ---- title` section |
-| `trino_sql/lakehouse.sql` | The Trino queries for CloudBeaver: Steps 13, 16–18, 24 |
+| `trino_sql/lakehouse.sql` | The Trino queries for CloudBeaver: Steps 13 and 16–18 |
 | `sql-editor/` | Flask proxy (`app.py`) in front of the SQL Gateway, and the one-page UI |
 | `scripts/tiering.sh`, `scripts/submit.sh` | Mounted into `jobmanager` and `sql-client` respectively |
+| `scripts/capture-screenshots.mjs` | Retakes WORKSHOP.md's screenshots (`docs/screenshots/`) from a running full-mode stack, through headless Chrome; Node 22+, no packages |
 | `scripts/tiering.args` | The tiering service's program arguments — the one copy, used by `tiering.sh` and the editor's Start button |
 | `postgres/pg_shop_ddl.sql`, `postgres/pg_dwh_ddl.sql` | The two PostgreSQL servers' setup, run once each via `docker-entrypoint-initdb.d`: `shop` seeds `product_catalog` (500 rows), its users (`shop_user`, `cdc_user`) and the CDC slot and publication; `dwh` creates `revenue_1m` and `dwh_user` |
 

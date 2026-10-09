@@ -32,6 +32,11 @@ job gets deployed.
 Your instructor started the environment with `./start.sh --services-only`: everything is
 running, and nothing has been submitted yet.
 
+The **lab homepage** is the place to start: the architecture you are about to build, and a
+link to every tool.
+
+![The lab homepage: the architecture diagram and the tools](docs/screenshots/tools-homepage.png)
+
 ### Using the Flink SQL editor
 
 - Type or paste SQL into the editor and press **Run** — or <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Enter</kbd>.
@@ -146,6 +151,8 @@ Flink only holds the definition; there is nothing in Kafka to store it in.
 > Open the **Redpanda Console** → **Topics** → `orders_log` to see the raw JSON messages
 > before they reach Flink.
 
+![The orders_log topic in Redpanda Console: one JSON message per order event, keyed by order_id](docs/screenshots/lab1-redpanda-topic.png)
+
 ### Step 4: Run the source → sink job
 
 This is the simple source → sink job the rest of the workshop builds on: read every
@@ -183,6 +190,10 @@ SELECT * FROM fluss.orders.orders_log;
 You will see order events appear in real time, with `status` progressing through
 `PLACED` → `PAID` → `SHIPPED` → `DELIVERED` (some orders show `CANCELLED` instead).
 Press **Cancel** to stop the query.
+
+**You should see** a live result panel, its row count climbing, one row per order event:
+
+![The Flink SQL editor streaming fluss.orders.orders_log](docs/screenshots/lab1-orders-log.png)
 
 > [!NOTE]
 > Unlike Kafka, the Fluss Log table has no retention window to worry about. That makes it
@@ -286,6 +297,10 @@ SELECT COUNT(*) AS products FROM fluss.orders.product_lookup;
 A streaming `COUNT` is itself a changelog: you will watch it climb (the `-U`/`+U` rows)
 and settle at `500`, the number of products this e-commerce company sells.
 
+**You should see** the count settle at `500`, while the panel keeps running:
+
+![A streaming COUNT over product_lookup, settled at 500](docs/screenshots/lab2-product-count.png)
+
 > [!TIP]
 > Leave the count running and change a product in PostgreSQL from a terminal:
 >
@@ -357,6 +372,10 @@ SELECT * FROM fluss.orders.orders_enriched;
 
 Cancel the query once you see rows carrying `product_name` and `category`.
 
+**You should see** the same events, now carrying the product's name, category and unit price:
+
+![The Flink SQL editor streaming fluss.orders.orders_enriched](docs/screenshots/lab2-orders-enriched.png)
+
 > [!WARNING]
 > Don't simplify this to a plain `JOIN ... ON` without `FOR SYSTEM_TIME AS OF`.
 > `product_lookup` is a PK (upsert) table, so a regular join against it produces a
@@ -398,6 +417,11 @@ actually writes to the lake is a Flink job, and you start it in the next step.
 > configuration into every table when it is created. Enabling tiering on a table created
 > *before* that configuration existed is not possible: it would have to be re-created.
 
+**You should see** `'table.datalake.enabled' = 'true'` among the table's options, next to
+the Iceberg and Lakekeeper settings:
+
+![SHOW CREATE TABLE orders_enriched, with tiering enabled](docs/screenshots/lab3-show-create.png)
+
 ### Step 12: Start the Datalake Tiering Service
 
 The **Fluss Datalake Tiering Service** is a long-running Flink job, shipped as a JAR by
@@ -412,6 +436,12 @@ click **Start**. After a few seconds it turns green and says *running*, with a l
 the job. The **Flink Web UI** now lists a job named `Fluss Lake Tiering Service - iceberg`.
 Leave it running. On its first round it picks up `orders_enriched`, which you opted in
 in Step 11, and starts committing it to Iceberg.
+
+**You should see** the tiering service among the running jobs in the Flink Web UI's
+**Overview**, next to the pipeline jobs from Labs 1 and 2. (The screenshot was taken at
+the end of the workshop, so it also shows Lab 5's `revenue-analytics-sink`.)
+
+![The Flink Web UI overview with the pipeline jobs and the tiering service running](docs/screenshots/lab3-flink-jobs.png)
 
 > [!TIP]
 > The deployed JAR is also listed in the Flink Web UI under **Submit New Job**, which is
@@ -440,6 +470,16 @@ You should see `orders_enriched`. Open **Lakekeeper** to browse the same catalog
 the **MinIO Console** to see the actual files, under
 `warehouse/lakehouse/orders/orders_enriched/`: `data/` holds Parquet, `metadata/` the
 Iceberg snapshots and manifests.
+
+**You should see** `orders_enriched` in Lakekeeper as an Iceberg v2 table, with a snapshot
+count that grows by one on every tiering commit:
+
+![Lakekeeper showing lakehouse.orders.orders_enriched](docs/screenshots/lab3-lakekeeper.png)
+
+And in MinIO, the Parquet files themselves. There is one `__bucket=N` folder per Fluss
+bucket, and a few new files in each on every commit:
+
+![The Parquet files of orders_enriched in the MinIO Console](docs/screenshots/lab3-minio-files.png)
 
 > [!NOTE]
 > If the table doesn't appear yet, the tiering service may still be starting — wait
@@ -498,6 +538,10 @@ no manual `UNION`. Compare the two rows:
 - The `$lake` side trails it: its `latest_event` is up to one tiering commit behind —
   about a minute here.
 
+**You should see** two one-row results, the union read ahead of `$lake` in both columns:
+
+![The two counts: Iceberg alone ($lake) and the union read](docs/screenshots/lab4-union-read.png)
+
 Run both queries again. The union read's count grows on every run. The `$lake` count
 stays put, then jumps once a tiering commit lands. Note the `$lake` numbers: you will
 see them again from Trino in the next step.
@@ -531,6 +575,11 @@ landed since), never the union read's. Note the three
 columns at the end that Fluss added on the way in — `__bucket`, `__offset` and
 `__timestamp` — recording exactly where each row came from in Fluss.
 
+**You should see** the Iceberg rows in CloudBeaver's result grid, through the
+**Trino — Lakehouse** connection:
+
+![SELECT * FROM lakehouse.orders.orders_enriched in CloudBeaver, through Trino](docs/screenshots/lab4-trino-select.png)
+
 ### Step 17: Run a historical analytics query
 
 Because the tiered data lives in columnar Parquet, Trino can scan the *entire* order
@@ -549,6 +598,8 @@ ORDER BY revenue DESC;
 ```
 
 You'll see lifetime delivered revenue per product, computed as a single batch scan.
+
+![Lifetime delivered revenue per product, from Trino](docs/screenshots/lab4-trino-history.png)
 
 > [!NOTE]
 > Why `status = 'DELIVERED'` and not `status <> 'CANCELLED'`? `orders_enriched` holds one
@@ -680,10 +731,26 @@ over every event would count each order up to four times.
 Because `orders_enriched` is tiered, this job's read is a union read too: it starts from
 the history in Iceberg, then continues from Fluss.
 
+Check the warehouse a minute later. The table is reachable through the same `postgres`
+catalog, and a bounded read is enough:
+
+```sql
+SET 'execution.runtime-mode' = 'batch';
+SELECT window_start, category, order_count, revenue, delivered_count, cancelled_count
+FROM postgres.dwh.revenue_1m ORDER BY window_start DESC, category LIMIT 20;
+SET 'execution.runtime-mode' = 'streaming';
+```
+
+**You should see** one row per minute and category, the newest windows first:
+
+![The newest windows in postgres.dwh.revenue_1m](docs/screenshots/lab5-revenue-rows.png)
+
 ### Step 20: Explore the dashboard
 
 Open **Grafana** → **Dashboards** → **Streaming Lakehouse — Order Analytics**. It is
 already provisioned, wired to the `dwh` warehouse database — nothing to import.
+
+![The Order Analytics dashboard in Grafana](docs/screenshots/lab5-grafana.png)
 
 - **KPI row**: orders and revenue booked, average order value, revenue delivered, the
   cancellation rate, and how many distinct products sold in the last window.
